@@ -66,7 +66,7 @@ The same 5-second clip: **20–30 min/clip** in a typical environment following 
 | [02 W4A8 vs W4A4](docs/en/02-w4a8-vs-w4a4.md) | Error data, production speed, another card's benchmark |
 | [03 SageAttention crash autopsy](docs/en/03-sageattention-crash.md) | The 2.2.0 wheel pipeline crash → root-cause hunt → rollback verification |
 | [04 Community tips verified](docs/en/04-community-tips.md) | Three directly-copyable tips + their applicability conditions |
-| [05 Workflows](docs/en/05-workflows.md) | compat t2v/i2v import, placeholder replacement, model download list |
+| [05 Workflows](docs/en/05-workflows.md) | compat t2v/i2v import, placeholder replacement, model download list (with copy-paste commands) |
 | [06 FAQ](docs/en/06-faq.md) | 13 entries: v3-node 400s, same-seed divergence, idle auto-exit, antivirus, prompt_id dedup, TE-Speed, audio clipping |
 | [07 Upgrade-window watch](docs/en/07-upgrade-watch.md) | The full route verdict table, v0.34 assessment, PDD LoRA #15908, official T8 open-sourcing |
 | [08 T8 on the 4-step route](docs/en/08-t8-blockcache-4step.md) | The −43% measurement: zero hits at defaults, 2.7 min/clip aggressive, the same-seed reproducibility cost |

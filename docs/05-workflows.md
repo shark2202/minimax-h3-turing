@@ -17,6 +17,70 @@
 - **坚持要 ax1y2jp 原名版**：h3lite Set A 百度盘 `pan.baidu.com/s/1x5GGuJv0h8chApgVoDgIaQ`（提取码 1hjx）
 - **国内镜像**：huggingface.co 直连不动时换 hf-mirror.com，路径不变；大文件建议多线程分块下载
 
+### 复制粘贴下载（命令版）
+
+上表用来看，这一节用来抄——整块复制执行即可。`MODELS` 指向 ComfyUI 的 `models/` 树；②④⑤⑥ 的仓库子目录（`text_encoders/`、`vae/`、`loras/`）与 ComfyUI 子目录同名，`--local-dir "$MODELS"` 直接落位，①③ 在仓库根目录、显式指定目标子目录（新版 CLI 等价写法：`hf download …`，参数相同）：
+
+```bash
+pip install -U huggingface_hub              # 已装可跳过
+MODELS=/path/to/ComfyUI/models              # ← 改成你的路径
+# export HF_ENDPOINT=https://hf-mirror.com  # 国内镜像：直连不动时取消注释
+
+# ① 主权重 W4A8 DiT（12.5G）→ diffusion_models/
+huggingface-cli download Kijai/MiniMax-H3-experimental \
+    minimax_h3_fl2va_pruned_w4a8_mixed.safetensors \
+    --local-dir "$MODELS/diffusion_models"
+
+# ② 文本编码器 qwen3vl-4b fp8（5.2G）→ text_encoders/
+huggingface-cli download Comfy-Org/Krea-2 \
+    text_encoders/qwen3vl_4b_fp8_scaled.safetensors \
+    --local-dir "$MODELS"
+
+# ③ ClipProj（304M）→ clip_projections/
+huggingface-cli download NicoLab28/ClipProj-MiniMax-H3 \
+    mmh3-4b-ClipProj-celeb-mlp.safetensors \
+    --local-dir "$MODELS/clip_projections"
+
+# ④ 双 VAE（视频 fp16 + 音频 fp32）→ vae/
+huggingface-cli download Comfy-Org/MiniMax-H3 \
+    vae/minimax_h3_video_vae_fp16.safetensors \
+    vae/minimax_h3_audio_vae_fp32.safetensors \
+    --local-dir "$MODELS"
+
+# ⑤ Turbo 4 步 LoRA 两支（compat 档用 v0.1，t8draft 档用 v1.0_768p）→ loras/
+huggingface-cli download Comfy-Org/MiniMax-H3 \
+    loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors \
+    loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors \
+    --local-dir "$MODELS"
+
+# ⑥ PDD 8 步 LoRA（FL2VA=t2v / Ref2VA=i2v，只跑 PDD 档才需要）→ loras/
+huggingface-cli download Kijai/MiniMax-H3-experimental \
+    loras/MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors \
+    loras/MiniMax-H3-Ref2VA-Acc-8Step_comfy.safetensors \
+    --local-dir "$MODELS"
+```
+
+下完核对：①–⑤ 约 21G；compat 工作流加载节点里是 Set-A 名（ax1y2jp / int4_convrot），按上方**改名规则**处理即可跑通。
+
+```bash
+ls -lh "$MODELS"/{diffusion_models,text_encoders,clip_projections,vae,loras}
+h3turing doctor --models-dir "$MODELS"     # 用法见 python/README
+```
+
+不方便装 CLI 时，把下面的直链逐条粘进浏览器 / `wget -c` / 任何下载器，下完手动放进对应目录（镜像只换域名 hf-mirror.com，路径不变；`wget -c` 自带断点续传，比 aria2 稳，见 [FAQ #5](06-faq.md)）：
+
+```text
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors
+https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors
+https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3/resolve/main/mmh3-4b-ClipProj-celeb-mlp.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/MiniMax-H3-Ref2VA-Acc-8Step_comfy.safetensors
+```
+
 ## 为什么是 "compat"
 
 H3 官方完整版工作流引用了 T8 BlockCache 节点和完整精度模型名，在 Turing 卡 + 未装 T8 的环境里是**死图**（节点缺失、模型对不上）。compat 版是社区维护的降级适配：

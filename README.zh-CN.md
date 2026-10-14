@@ -67,7 +67,7 @@
 | [02 量化路线实测](docs/02-w4a8-vs-w4a4.md) | W4A4 vs W4A8 误差数据、产线速度、社区同款卡成绩 |
 | [03 SageAttention 崩溃实录](docs/03-sageattention-crash.md) | 2.2.0 wheel 接入管线崩溃 → 定位 → 回滚验证全过程 |
 | [04 社区经验验证](docs/04-community-tips.md) | 可直接抄的三点 + 适用条件 |
-| [05 工作流说明](docs/05-workflows.md) | compat t2v/i2v 工作流导入与占位符替换 |
+| [05 工作流说明](docs/05-workflows.md) | compat t2v/i2v 工作流导入与替换、模型下载清单（含复制粘贴命令版） |
 | [06 踩坑 FAQ](docs/06-faq.md) | 13 条：v3 节点 400、同 seed 失灵、空闲自退、杀软拖慢、prompt_id 去重、TE-Speed 排除、音频削波 |
 | [07 升级窗口追踪](docs/07-upgrade-watch.md) | 提速路线判决全景、v0.34 评估、PDD LoRA #15908、T8 官方开源 |
 | [08 T8 四步实测](docs/08-t8-blockcache-4step.md) | 43% 提速实测：默认参数零命中、激进档 2.7 分钟/镜、同 seed 复现性代价 |

@@ -36,7 +36,7 @@ All of these were actually hit on this box, ordered by how much they hurt.
 
 **Root cause**: certain sandbox/security-software environments silently delete aria2's temp files (the `.aria2` control file plus unflushed data).
 
-**Fix**: use a Python chunked downloader (requests + resume); far more stable. All 12.5G+ models on this box moved to that path.
+**Fix**: use a Python chunked downloader (requests + resume); far more stable. All 12.5G+ models on this box moved to that path. Copy-paste variants (`huggingface-cli download` commands and a `wget -c` direct-link list): [05](05-workflows.md).
 
 ## 6. pinned-memory read_file_slice OOM
 

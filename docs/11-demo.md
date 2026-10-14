@@ -12,7 +12,7 @@
      --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory
    ```
 
-2. **权重**：按 [05 的下载清单](05-workflows.md) 把 W4A8 组件放进 `models/`（约 21G，下完可用 `h3turing doctor --models-dir` 核对）。
+2. **权重**：按 [05 的下载清单与复制粘贴命令](05-workflows.md) 把 W4A8 组件放进 `models/`（约 21G，下完可用 `h3turing doctor --models-dir` 核对）。
 3. **本工具包**：
 
    ```bash

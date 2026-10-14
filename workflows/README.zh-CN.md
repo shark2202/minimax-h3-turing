@@ -73,7 +73,7 @@ PDD 官方蒸馏 LoRA（8 步）+ T8 缓存的组合拳：**目前最快档，�
 
 ## 前置依赖
 
-- 模型组：W4A8 mixed DiT + 双 VAE（video fp16 / audio fp32）+ qwen3vl_4b text encoder + ClipProj + fl2v Turbo 4step LoRA（清单见 [docs/05](../docs/05-workflows.md)）
+- 模型组：W4A8 mixed DiT + 双 VAE（video fp16 / audio fp32）+ qwen3vl_4b text encoder + ClipProj + fl2v Turbo 4step LoRA（清单与复制粘贴下载命令见 [docs/05](../docs/05-workflows.md)）
 - **草稿档额外需要**：[T8mars/comfyui-minimax-h3-blockcache-T8](https://github.com/T8mars/comfyui-minimax-h3-blockcache-T8) 节点包（装到 `custom_nodes/` 重启即注册，v0.33.1 可用——无需升级 ComfyUI）
 - 启动参数（防 TDR/OOM）：`--reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory`，模板见 [scripts/h3_launch.example.sh](../scripts/h3_launch.example.sh)
 

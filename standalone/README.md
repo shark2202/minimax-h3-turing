@@ -18,7 +18,7 @@ python h3_demo.py --comfy-dir /path/to/ComfyUI \
 
 `--comfy-dir` 可用环境变量 `COMFYUI_PATH` 代替；`--workflow` 可换六件套任意档。完整说明（形态对比、原理、边界）见 [docs/12](../docs/12-standalone-demo.md)。
 
-**所需模型 = docs/05 清单**（[下载表](../docs/05-workflows.md)，~21G），按表放入 ComfyUI 的 `models/diffusion_models/`、`text_encoders/`、`clip_projections/`、`vae/`、`loras/` ——与 ComfyUI 服务器路线完全同一套，装过一次两边共用。
+**所需模型 = docs/05 清单**（[下载表 + 复制粘贴命令](../docs/05-workflows.md)，~21G），按表放入 ComfyUI 的 `models/diffusion_models/`、`text_encoders/`、`clip_projections/`、`vae/`、`loras/` ——与 ComfyUI 服务器路线完全同一套，装过一次两边共用。
 
 ## 附录：纯 Diffusers 替代路线（`demo.py`，Wan 2.1 · 不是 H3）
 

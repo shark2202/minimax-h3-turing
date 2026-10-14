@@ -36,7 +36,7 @@
 
 **根因**：特定沙箱/安全软件环境会静默删除 aria2 的临时下载文件（`.aria2` 控制文件 + 未落盘数据）。
 
-**解法**：大文件用 Python 分块下载器（requests + 断点续传），稳定得多。本机 12.5G+ 模型全部改走这条路。
+**解法**：大文件用 Python 分块下载器（requests + 断点续传），稳定得多。本机 12.5G+ 模型全部改走这条路。复制粘贴版：`huggingface-cli download` 命令与 `wget -c` 直链清单见 [05](05-workflows.md)。
 
 ## 6. pinned memory 的 read_file_slice OOM
 

@@ -12,7 +12,7 @@
      --reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory
    ```
 
-2. **Weights**: put the W4A8 component set into `models/` per the [download list in 05](05-workflows.md) (~21G; verify with `h3turing doctor --models-dir` afterwards).
+2. **Weights**: put the W4A8 component set into `models/` per the [download list + copy-paste commands in 05](05-workflows.md) (~21G; verify with `h3turing doctor --models-dir` afterwards).
 3. **This toolkit**:
 
    ```bash

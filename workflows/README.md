@@ -73,7 +73,7 @@ The ultimate draft tier for face-locked shots — the fastest record in this pro
 
 ## Prerequisites
 
-- Model set: W4A8 mixed DiT + dual VAE (video fp16 / audio fp32) + qwen3vl_4b text encoder + ClipProj + fl2v Turbo 4-step LoRA (full list with links: [docs/05](../docs/en/05-workflows.md))
+- Model set: W4A8 mixed DiT + dual VAE (video fp16 / audio fp32) + qwen3vl_4b text encoder + ClipProj + fl2v Turbo 4-step LoRA (full list + copy-paste download commands: [docs/05](../docs/en/05-workflows.md))
 - **Fast-draft tiers additionally need**: the [T8mars/comfyui-minimax-h3-blockcache-T8](https://github.com/T8mars/comfyui-minimax-h3-blockcache-T8) node pack (drop into `custom_nodes/`, restart; works on v0.33.1 — no ComfyUI upgrade required)
 - **The PDD ultra tier additionally needs**: a master-environment ComfyUI + the PDD weights + the T8 master-compat patch ([docs/09](../docs/en/09-pdd-backport.md))
 - Launch flags (against TDR/OOM): `--reserve-vram 2.5 --vram-headroom 0.5 --disable-pinned-memory` — template at [scripts/h3_launch.example.sh](../scripts/h3_launch.example.sh)

@@ -17,6 +17,70 @@ The file names referenced by the workflows come from h3lite's W4A8 component Set
 - **If you insist on the ax1y2jp-named originals**: h3lite Set A, Baidu Pan `pan.baidu.com/s/1x5GGuJv0h8chApgVoDgIaQ` (code `1hjx`)
 - **China mirror**: if huggingface.co won't connect, swap the domain for hf-mirror.com — paths unchanged; multi-threaded chunked downloads recommended for the big files
 
+### Copy-paste Download (commands)
+
+The table above is for reading; this block is for pasting. Point `MODELS` at your ComfyUI `models/` tree. In ②④⑤⑥ the repo subfolders (`text_encoders/`, `vae/`, `loras/`) share ComfyUI's directory names, so `--local-dir "$MODELS"` drops the files straight into place; ①③ live at the repo root, hence the explicit target subdirectory (new-style CLI equivalent: `hf download …`, same arguments):
+
+```bash
+pip install -U huggingface_hub              # skip if already installed
+MODELS=/path/to/ComfyUI/models              # ← change to your path
+# export HF_ENDPOINT=https://hf-mirror.com  # China mirror: uncomment when direct access fails
+
+# ① Main W4A8 DiT (12.5G) → diffusion_models/
+huggingface-cli download Kijai/MiniMax-H3-experimental \
+    minimax_h3_fl2va_pruned_w4a8_mixed.safetensors \
+    --local-dir "$MODELS/diffusion_models"
+
+# ② Text encoder qwen3vl-4b fp8 (5.2G) → text_encoders/
+huggingface-cli download Comfy-Org/Krea-2 \
+    text_encoders/qwen3vl_4b_fp8_scaled.safetensors \
+    --local-dir "$MODELS"
+
+# ③ ClipProj (304M) → clip_projections/
+huggingface-cli download NicoLab28/ClipProj-MiniMax-H3 \
+    mmh3-4b-ClipProj-celeb-mlp.safetensors \
+    --local-dir "$MODELS/clip_projections"
+
+# ④ Dual VAE (video fp16 + audio fp32) → vae/
+huggingface-cli download Comfy-Org/MiniMax-H3 \
+    vae/minimax_h3_video_vae_fp16.safetensors \
+    vae/minimax_h3_audio_vae_fp32.safetensors \
+    --local-dir "$MODELS"
+
+# ⑤ Both Turbo 4-step LoRAs (compat tier uses v0.1, t8draft tier uses v1.0_768p) → loras/
+huggingface-cli download Comfy-Org/MiniMax-H3 \
+    loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors \
+    loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors \
+    --local-dir "$MODELS"
+
+# ⑥ PDD 8-step LoRAs (FL2VA = t2v / Ref2VA = i2v; only for the PDD tiers) → loras/
+huggingface-cli download Kijai/MiniMax-H3-experimental \
+    loras/MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors \
+    loras/MiniMax-H3-Ref2VA-Acc-8Step_comfy.safetensors \
+    --local-dir "$MODELS"
+```
+
+Verify afterwards: ①–⑤ total ~21G; the compat workflows reference the Set-A names (ax1y2jp / int4_convrot) in their loader nodes — apply the **renaming rule** above and they run.
+
+```bash
+ls -lh "$MODELS"/{diffusion_models,text_encoders,clip_projections,vae,loras}
+h3turing doctor --models-dir "$MODELS"     # usage in python/README
+```
+
+Without the CLI, paste the direct links below into a browser / `wget -c` / any downloader, then move the files into the matching directories (mirror = domain swap to hf-mirror.com, paths unchanged; `wget -c` resumes by itself and survives where aria2 doesn't — see [FAQ #5](06-faq.md)):
+
+```text
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors
+https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors
+https://huggingface.co/NicoLab28/ClipProj-MiniMax-H3/resolve/main/mmh3-4b-ClipProj-celeb-mlp.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy_resized_avg_rank_21_bf16.safetensors
+https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors
+https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/loras/MiniMax-H3-Ref2VA-Acc-8Step_comfy.safetensors
+```
+
 ## Why "compat"
 
 H3's official full workflows reference the T8 BlockCache node and full-precision model names — a **dead diagram** on a Turing card without T8 installed (missing nodes, mismatched models). The compat versions are community-maintained degradations:
