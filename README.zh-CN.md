@@ -17,6 +17,8 @@
 
 ## 这个仓库能给你什么
 
+- ✅ **一条命令的最小 Demo**：`h3turing demo --prompt "..."`（加 `--image` 即图生视频）——从文本/首帧图到本地 mp4 全流程一键跑通 → [11](docs/11-demo.md)
+- ✅ **脱离 ComfyUI 服务器的 H3 Demo**：`standalone/h3_demo.py` 单进程直跑——不起服务、不走 HTTP，ComfyUI 嵌入为库，权重零新增（另有纯 Diffusers 的 Wan 附录）→ [12](docs/12-standalone-demo.md)
 - ✅ **可直接导入的六件套工作流**（t2v/i2v × 成片/草稿 + PDD 极速档×2），全部真机实测、附预览截图——见 [workflows/README](workflows/README.md)
 - ✅ **Python 库 `h3-turing`**：以上全部经验代码化——六件套预设、带重试纪律的 ComfyUI 客户端、A/B 基准框架、开工检查，零依赖（纯标准库）——见 [python/](python/README.md)
 - ✅ **13 条踩坑 FAQ**：v3 节点提交 400、同 seed 重跑失灵、空闲自退灭批、杀软拖慢 27 分钟、prompt_id 静默丢弃……每条都是真金白银踩出来的 → [06](docs/06-faq.md)
@@ -71,6 +73,8 @@
 | [08 T8 四步实测](docs/08-t8-blockcache-4step.md) | 43% 提速实测：默认参数零命中、激进档 2.7 分钟/镜、同 seed 复现性代价 |
 | [09 PDD 提前落地](docs/09-pdd-backport.md) | 不等 release 的 master backport 实录：PDD8+T8 组合 **210s（-34%）命中 6/8**，三坑全解 |
 | [10 基准数据总表](docs/10-benchmarks.md) | 全部实测一张表：t2v/i2v 各档、命中矩阵、机理常数、音频、版本对比、判死路线 |
+| [11 最小 Demo](docs/11-demo.md) | 一条命令跑通 文本/图片 → 视频：前置、t2v/i2v 用法、成功输出、排错 |
+| [12 脱离 ComfyUI 服务器的 Demo](docs/12-standalone-demo.md) | H3 嵌入库模式单进程直跑：零新增下载、防黑屏参数注入、逐节点执行 |
 | [workflows/](workflows/README.md) | 六件套（附预览截图）：t2v/i2v × 成片/草稿 + PDD 极速档，含导入指南 |
 | [scripts/](scripts/) | 防黑屏启动参数、T8/PDD A/B 实验脚本 |
 

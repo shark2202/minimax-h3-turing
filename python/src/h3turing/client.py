@@ -16,7 +16,10 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
+import uuid
+from pathlib import Path
 from typing import Any
 
 
@@ -33,6 +36,45 @@ def bump_seed(graph: dict[str, Any], delta: int = 1) -> dict[str, Any]:
         if inputs and "noise_seed" in inputs:
             inputs["noise_seed"] = int(inputs["noise_seed"]) + delta
     return graph
+
+
+# SaveVideo still reports under the legacy "gifs" ui key; collect_outputs
+# scans all three so the demo survives naming drift across ComfyUI versions.
+OUTPUT_KEYS = ("gifs", "videos", "images")
+
+
+def collect_outputs(history: dict[str, Any]) -> list[dict[str, str]]:
+    """Extract every saved file entry from a finished history entry.
+
+    Returns [{"filename", "subfolder", "type", "node_id"}, ...] in node order.
+    Works for SaveVideo (video/*.mp4 under output) and any image nodes.
+    """
+    files: list[dict[str, str]] = []
+    for nid, out in (history.get("outputs") or {}).items():
+        if not isinstance(out, dict):
+            continue
+        for key in OUTPUT_KEYS:
+            for entry in out.get(key) or []:
+                if entry.get("filename"):
+                    files.append({"node_id": nid, **{
+                    k: entry[k] for k in ("filename", "subfolder", "type") if k in entry}})
+    return files
+
+
+def _multipart(fields: dict[str, tuple]) -> tuple[bytes, str]:
+    """Encode multipart/form-data; returns (body, boundary)."""
+    boundary = "h3turing" + uuid.uuid4().hex
+    parts = []
+    for name, (filename, data, ctype) in fields.items():
+        disp = f'form-data; name="{name}"'
+        if filename:
+            disp += f'; filename="{filename}"'
+        head = f"--{boundary}\r\nContent-Disposition: {disp}\r\n"
+        if ctype:
+            head += f"Content-Type: {ctype}\r\n"
+        parts.append(head.encode() + b"\r\n" + data + b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode())
+    return b"".join(parts), boundary
 
 
 class ValidationError(RuntimeError):
@@ -118,11 +160,14 @@ class ComfyUI:
         return self._call(f"/history/{prompt_id}").get(prompt_id)
 
     def wait(self, prompt_id: str, max_s: float = 1800.0,
-             poll_every: float = 10.0, stall_polls: int = 5) -> dict[str, Any]:
+             poll_every: float = 10.0, stall_polls: int = 5,
+             on_poll=None) -> dict[str, Any]:
         """Poll until the job completes. Returns the history entry.
 
         Raises RuntimeError on execution error, on losing the job from the
         queue without history (stall), or on ``max_s`` timeout.
+        ``on_poll(elapsed_s, history_or_None, queue_dict)`` if given is called
+        after every poll - progress display for long renders.
         """
         t0 = time.time()
         stalled = 0
@@ -133,6 +178,8 @@ class ComfyUI:
                 q = self.queue()
             except Exception:
                 continue  # transient API lag under GPU load - keep waiting
+            if on_poll:
+                on_poll(time.time() - t0, h, q)
             if h:
                 st = h.get("status", {})
                 if st.get("completed") or st.get("status_str") == "success":
@@ -157,3 +204,51 @@ class ComfyUI:
         """Submit + wait. Convenience for one-shot scripts."""
         pid = self.submit(graph, client_id=client_id)
         return self.wait(pid, max_s=max_s)
+
+    def upload_image(self, path: str | Path, overwrite: bool = True) -> str:
+        """Upload a first-frame image via /upload/image; returns the stored name.
+
+        The stored name is what LoadImage's ``image`` input must reference -
+        ComfyUI suffixes it (``photo_00001.png``) on name collision unless
+        ``overwrite`` is set. Same retry discipline as every other call.
+        """
+        path = Path(path)
+        body, boundary = _multipart({
+            "image": (path.name, path.read_bytes(), "image/" + path.suffix.lstrip(".").lower()),
+            "overwrite": (None, b"true" if overwrite else b"false", None),
+            "type": (None, b"input", None),
+        })
+        last: Exception | None = None
+        for attempt in range(self.retries):
+            try:
+                req = urllib.request.Request(
+                    self.base + "/upload/image", data=body, method="POST",
+                    headers={"Content-Type": "multipart/form-data; boundary=" + boundary})
+                resp = json.loads(urllib.request.urlopen(req, timeout=self.timeout).read())
+                return resp["name"]
+            except Exception as e:
+                last = e
+            time.sleep(self.backoff * (attempt + 1))
+        raise RuntimeError(f"upload {path.name} failed after {self.retries} attempts: {last}")
+
+    def download(self, entry: dict[str, str], dest: str | Path) -> Path:
+        """Fetch a history file entry (/view) to ``dest``; returns the path."""
+        query = urllib.parse.urlencode({
+            "filename": entry["filename"],
+            "subfolder": entry.get("subfolder", ""),
+            "type": entry.get("type", "output"),
+        })
+        last: Exception | None = None
+        for attempt in range(self.retries):
+            try:
+                dest = Path(dest)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with urllib.request.urlopen(self.base + "/view?" + query,
+                                             timeout=self.timeout) as r, open(dest, "wb") as f:
+                    f.write(r.read())
+                return dest
+            except Exception as e:
+                last = e
+            time.sleep(self.backoff * (attempt + 1))
+        raise RuntimeError(f"download {entry.get('filename')} failed "
+                           f"after {self.retries} attempts: {last}")

@@ -6,9 +6,10 @@ https://github.com/IvenKooLab/minimax-h3-turing
 Zero runtime dependencies - stdlib only, like the ComfyUI ecosystem itself.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 from .tiers import TIERS, Tier, get
-from .workflows import load, render, set_prompt, set_seed
+from .workflows import load, render, set_image, set_prompt, set_seed
 
-__all__ = ["TIERS", "Tier", "get", "load", "render", "set_prompt", "set_seed", "__version__"]
+__all__ = ["TIERS", "Tier", "get", "load", "render",
+           "set_image", "set_prompt", "set_seed", "__version__"]

@@ -16,6 +16,8 @@ The same 5-second clip: **20–30 min/clip** in a typical environment following 
 
 ## What This Repo Gives You
 
+- ✅ **A one-command minimal demo**: `h3turing demo --prompt "..."` (add `--image` for image-to-video) — the full text/image → local-mp4 pipeline in a single command → [11](docs/en/11-demo.md)
+- ✅ **An H3 demo without the ComfyUI server**: `standalone/h3_demo.py` runs in a single process - no server, no HTTP, ComfyUI embedded as a library, zero new weight downloads (pure-Diffusers Wan appendix included) → [12](docs/en/12-standalone-demo.md)
 - ✅ **Six ready-to-import workflows** (t2v/i2v, each with a final-shot tier and a T8 fast-draft tier, plus a PDD ultra tier) — all verified on real hardware, with preview screenshots: [workflows/README](workflows/README.md)
 - ✅ **The Python library `h3-turing`**: all of the above codified - six tier presets, a retry-disciplined ComfyUI client, the A/B benchmark harness, pre-production checks. Zero dependencies (stdlib only) — see [python/](python/README.md)
 - ✅ **13 field-tested FAQ entries**: v3-node 400s on `/prompt`, same-seed re-runs diverging, idle auto-exit killing batches, antivirus slowing model loading by 27 minutes, silent prompt_id dedup drops… every one paid for in real time → [06](docs/en/06-faq.md)
@@ -70,6 +72,8 @@ The same 5-second clip: **20–30 min/clip** in a typical environment following 
 | [08 T8 on the 4-step route](docs/en/08-t8-blockcache-4step.md) | The −43% measurement: zero hits at defaults, 2.7 min/clip aggressive, the same-seed reproducibility cost |
 | [09 PDD without waiting](docs/en/09-pdd-backport.md) | The master backport field report: PDD8+T8 **210 s (−34%), 6/8 hits**, three pitfalls solved |
 | [10 Benchmark dataset](docs/en/10-benchmarks.md) | Every measurement on one page: all tiers, the hit matrix, mechanism constants, audio, version deltas, ruled-out routes |
+| [11 Minimal demo](docs/en/11-demo.md) | Text/image → video in one command: prerequisites, t2v/i2v usage, expected output, troubleshooting |
+| [12 Demo without the ComfyUI server](docs/en/12-standalone-demo.md) | H3 embedded-library mode in one process: zero new downloads, injected launch flags, node-by-node execution |
 | [workflows/](workflows/README.md) | The six-workflow kit (with previews): t2v/i2v × final/draft + PDD ultra tiers, with import guide |
 | [scripts/](scripts/) | Anti-black-screen launch template, T8 A/B harness, chart regen script |
 

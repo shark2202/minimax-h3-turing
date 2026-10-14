@@ -14,6 +14,7 @@ from importlib import resources
 from typing import Any
 
 PROMPT_PLACEHOLDER = "__H3_PROMPT__"
+IMAGE_PLACEHOLDER = "__H3_FIRST_FRAME__"   # i2v graphs only (LoadImage.image)
 
 
 def load(name: str) -> dict[str, Any]:
@@ -51,6 +52,21 @@ def set_seed(graph: dict[str, Any], seed: int) -> dict[str, Any]:
         if inputs and "noise_seed" in inputs:
             inputs["noise_seed"] = int(seed)
     return graph
+
+
+def set_image(graph: dict[str, Any], filename: str) -> dict[str, Any]:
+    """Replace the ``__H3_FIRST_FRAME__`` placeholder with a ComfyUI input
+    filename (in place). That filename is what :meth:`ComfyUI.upload_image`
+    returns - not your local path. Raises ValueError if the graph has no
+    placeholder (t2v graphs) or it was already consumed."""
+    for node in graph.values():
+        inputs = node.get("inputs") if isinstance(node, dict) else None
+        if inputs and inputs.get("image") == IMAGE_PLACEHOLDER:
+            inputs["image"] = filename
+            return graph
+    raise ValueError(
+        f"no {IMAGE_PLACEHOLDER!r} found - t2v graphs take no image, and an "
+        "i2v graph may already have its first frame baked in")
 
 
 def render(graph: dict[str, Any]) -> dict[str, Any]:

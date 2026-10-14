@@ -10,6 +10,15 @@ pip install git+https://github.com/IvenKooLab/minimax-h3-turing.git#subdirectory
 
 ## Quick start
 
+The whole pipeline as one command (text → video; add `--image` for image → video — full walkthrough in the handbook's docs/11):
+
+```bash
+h3turing demo --prompt "a lone swordsman in a misty bamboo forest at dawn"   # t2v-final
+h3turing demo --image first_frame.png --prompt "she turns to camera"         # i2v-final
+```
+
+Or as a library:
+
 ```python
 from h3turing import get, load, render, set_prompt, set_seed
 from h3turing.client import ComfyUI, bump_seed
@@ -28,7 +37,7 @@ history = comfy.render(graph)                 # submit + poll with stall detecti
 | Module | Codified experience |
 |---|---|
 | `h3turing.tiers` | The six measured tiers (t2v/i2v × final/draft + PDD ultra tiers) with requirements, reproducibility discipline and reference timings |
-| `h3turing.client` | ComfyUI HTTP client: retry-with-backoff (the API lags at 100% GPU), parsed v3-node 400 errors, `bump_seed()` against silent prompt_id dedup, stall-aware polling |
+| `h3turing.client` | ComfyUI HTTP client: retry-with-backoff (the API lags at 100% GPU), parsed v3-node 400 errors, `bump_seed()` against silent prompt_id dedup, stall-aware polling, first-frame upload + output download |
 | `h3turing.workflows` | The bundled six-workflow kit (API graphs with `__H3_PROMPT__` placeholders), safe deep copies |
 | `h3turing.benchmark` | Same-seed A/B harness with cache-hit parsing - the methodology behind every number in the handbook |
 | `h3turing.doctor` | Pre-production checks: ComfyUI alive, queue clean (persisted-queue revival, FAQ #3), T8 node registered, core weights present |
