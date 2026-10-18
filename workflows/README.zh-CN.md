@@ -10,6 +10,7 @@
 | [i2v 草稿快跑档](#4-图生视频--草稿快跑档-t8--38) | 锁脸镜头的草稿预览 | 260 s（4.3 min，**-38%**） |
 | [i2v PDD8+T8 极速草稿](#6-图生视频--pdd8t8-极速草稿-192s--master-环境) | 锁脸·最快且最高画质 | **192 s（-51%）** |
 | [t2v PDD8+T8 极速草稿](#5-文生视频--pdd8t8-极速草稿-210s--master-环境) | 最快且画质最高的草稿 | **210 s（-34% vs Turbo）** |
+| [t2v 成片档 + 本地 Qwen3.8 写剧本](#7-文生视频--本地-qwen38-写剧本节点) | 小模型当场写剧本/提示词，同一次排队出片 | 280 s + 剧本 ≈15 s |
 
 ---
 
@@ -62,6 +63,18 @@ PDD 官方蒸馏 LoRA（8 步）+ T8 缓存的组合拳：**目前最快档，�
 **文件**：[h3_w4a8_i2v_pdd8_t8_api.json](h3_w4a8_i2v_pdd8_t8_api.json) · **实测 192 s/镜（-51%，命中 6/8）**
 
 锁脸镜头的终极草稿档：全项目最快纪录。前置与第 5 节相同（master 环境 + PDD 权重 + T8 补丁），LoRA 换 Ref2VA 版。同 seed 不可复现；要可复现的 Ref2VA 成片，去掉 T8 跑纯 8 步（933s）。
+
+## 7. 文生视频 · 本地 Qwen3.8 写剧本节点
+
+**文件**：[h3_w4a8_t2v_qwenscript_api.json](h3_w4a8_t2v_qwenscript_api.json) · **实测 280 s/镜 + 剧本 ≈15 s**
+
+不是新档位，是 t2v 成片档 + 一个自定义节点（`ComfyUI-QwenScript`）：`[6] prompt` 由字面量改成接节点的
+`prompt` 输出，于是**"写剧本 → 出片"在同一次排队里跑完**。节点让本机的小参数 Qwen3.8-9B（去审查版）
+写逐镜剧本；`shot` 选第几镜，`reuse_script` 复用已生成的 `.shots.json` 逐镜出片。
+
+- 依赖：`comfy_nodes/ComfyUI-QwenScript/`（本仓库跟踪；`scripts/install_qwen_node.local.sh` 符号链接进 ComfyUI）+ `~/models/Qwen3.8-9B-heretic/` 权重
+- 22 GB 显存装不下 LLM 与 H3 两套 → 节点自己错峰：先卸载 ComfyUI 缓存，生成完只杀自己拉起的服务
+- 细节、实测数字与纯命令行版本见 `RUNBOOK.local.md` §3.6 与 `qwen3.8-2080ti-256k/docs/SMALL_MODELS.md`
 
 ---
 

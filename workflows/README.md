@@ -10,6 +10,7 @@ All verified on a 2080Ti 22G + ComfyUI + W4A8 mixed weights (same-night, same-se
 | [i2v fast-draft tier](#4-i2v--fast-draft-tier-t8--38) | drafts for face-locked shots | 260 s (4.3 min, **−38%**) |
 | [i2v PDD8+T8 ultra draft](#6-i2v--pdd8t8-ultra-draft-192-s--master-only) | face lock · fastest and highest quality | **192 s (−51%)** |
 | [PDD8+T8 ultra draft](#5-t2v--pdd8t8-ultra-draft-210-s--master-only) | fastest AND highest-quality drafts | **210 s (−34% vs Turbo)** |
+| [t2v final + local Qwen3.8 script node](#7-t2v--local-qwen38-screenplay-node) | the small local model writes the prompt/剧本, one queue run | 280 s + ≈15 s script |
 
 ---
 
@@ -62,6 +63,20 @@ The official PDD distilled LoRA (8-step) combined with the T8 cache: **currently
 **File**: [h3_w4a8_i2v_pdd8_t8_api.json](h3_w4a8_i2v_pdd8_t8_api.json) · **192 s/clip (−51%, 6/8 hits)**
 
 The ultimate draft tier for face-locked shots — the fastest record in this project. Same prerequisites as section 5 (master environment + PDD weights + the T8 patch), with the Ref2VA LoRA. Not same-seed reproducible; for reproducible Ref2VA finals drop the T8 node and run pure 8-step (933 s).
+
+## 7. t2v · Local Qwen3.8 Screenplay Node
+
+**File**: [h3_w4a8_t2v_qwenscript_api.json](h3_w4a8_t2v_qwenscript_api.json) · **280 s/clip + ≈15 s for the script**
+
+Not a new tier: the t2v final tier plus one custom node (`ComfyUI-QwenScript`). `[6] prompt` is a link to the
+node's `prompt` output instead of a literal, so **"write the 剧本 → render" happens in one queue run**. The node
+asks a local small Qwen3.8-9B (uncensored build) for a shot-by-shot screenplay; `shot` picks which shot,
+`reuse_script` reuses the generated `.shots.json` so later shots need no further model call.
+
+- Needs `comfy_nodes/ComfyUI-QwenScript/` (tracked here; `scripts/install_qwen_node.local.sh` symlinks it into ComfyUI) + the `~/models/Qwen3.8-9B-heretic/` weights
+- 22 GB cannot hold both the LLM and H3, so the node staggers them: it unloads ComfyUI's cache, starts the
+  server, and kills only the one it started
+- Details, measured numbers and the pure-CLI version: `RUNBOOK.local.md` §3.6 and `qwen3.8-2080ti-256k/docs/SMALL_MODELS.md`
 
 ---
 
