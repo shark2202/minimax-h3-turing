@@ -2,7 +2,7 @@
 
 > 这份是**本机（a@2080Ti-22G 服务器）专属**的落地记录，不是上游 handbook 的一部分。
 > 上游原理与实测数据见 `docs/`，这里只写"在这台机器上怎么跑"。
-> 最后更新：2026-10-18（图生视频 i2v 实测三次跑通 + 产物断言脚本 `scripts/check_video.py`；上一条：2026-10-15 首次部署并实测跑通 t2v 成片档）
+> 最后更新：2026-10-18（新增 §1.3「共存/同时/并行」三问的结论；图生视频 i2v 实测三次跑通 + 产物断言脚本 `scripts/check_video.py`；上一条：2026-10-15 首次部署并实测跑通 t2v 成片档）
 
 ---
 
@@ -160,6 +160,20 @@ scripts/fetch_models.sh --only 9b --jobs 12 --mirror hf-mirror
   同一天还实测：27B（19810 MiB）与 9B（6776 MiB）都能从新路径加载并生成，ComfyUI 剧本→出片整链跑通
   （`H3Lite_00014_.mp4`，节点日志显示 `starting llama-server` 走的就是新路径）。所以"搬家"是零风险操作：
   同一文件系统内 `mv` 只改目录项，内容不动；真被换过/截断过，这一条命令会指出是哪一行。
+
+### 1.3 同一张卡上「共存 / 同时 / 并行」三种问法
+
+| 问法 | 结论 | 依据 |
+|---|---|---|
+| 两套环境同机共存 | ✅ 已实测（§5.3，`H3Lite_00012/13/14_.mp4`） | 串行错峰 + 数字断言，不靠自律 |
+| LLM 与 H3 同时驻留显存 | ❌ 25734 > 22528 MiB，物理装不下 | §1.2 账本 |
+| 两个模型真并行推理 | ❌ 同上，单卡无解 | 替代路线及代价见 §1.2 末段 |
+
+- **错峰机制长在图依赖里，不靠 sleep**：`QwenScript` 节点先卸载 ComfyUI 模型缓存 → 拉起 llama-server（6.8 GB）→ 出剧本 → **只杀自己拉起的那个进程**（按 `TargetModel` 路径匹配，不误杀）→ 采样器进场前断言设备级空闲 ≥19700 MiB。
+  源码 `comfy_nodes/ComfyUI-QwenScript/qwen_script.py`（文件头注释即协议）；机制另见 qwen 仓库 `docs/SMALL_MODELS.md` 工作流 B
+- **`llamacpp` 与 `kvmem-llamacpp` 之间也不能同时**：两者都绑 `127.0.0.1:8080`，且 KVMem 的 256K 逻辑上下文照样要吃 GPU working set（`KVMemBudget` / `GenerationReserve`）——是**二选一**，不是"再加一个"（qwen 仓库 `docs/LAUNCH_PARAMS.md`）
+- **内存（33.5 GB）是唯一真正能共享的一层**：权重走 mmap / 动态装载，两边不同时把所有页拉起就够用（H3 动态装载 staging 13.5 GB 落在主机内存 + LLM 权重 5.24 GiB 走 mmap 页缓存 ≈ 19 GB）。
+  ⚠️ 但**这一层没有断言**：抢页缓存的退化路径是 swap（变慢），不会像显存那样当场报错——所以"显存断言通过"不等于"内存没问题"
 
 ---
 
@@ -524,14 +538,15 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 | 项 | 现状 | 影响 |
 |---|---|---|
 | **服务持久化** | 服务**手动启动，不设自启**（本机明确定策）：重启机器/结束会话后，手动跑一次 `scripts/h3_launch.local.sh`（约 20s 就绪） | 无 |
-| git | 本仓库待提交：`RUNBOOK.local.md`、`workflows/README*.md`、`comfy_nodes/`、`workflows/h3_w4a8_t2v_qwenscript_api.json`、`workflows/sdxl_juggernaut_t2i_api.json`、`scripts/check_video.py`、`scripts/install_qwen_node.local.sh`；`h3_demo_output/` 与 `.pi/` 已进 `.gitignore` | 一次 `git add -A && git commit` 即可留档 |
-| qwen 仓库待提交 | 小模型支持（`start-llama.sh`/`start-kvmem.sh`/`check-config.sh`/`config.example.sh`）与剧本工具（`scripts/screenplay.py` + `screenplay.system.md`）；`config.small.sh` 按设计本地（已 gitignore），`docs/SMALL_MODELS.md` 是本地笔记（并入上游前要英译+合并） | 在该仓库 `git add` 后提交 |
+| git（本仓库） | ✅ 已入库（`6d160a5` 等）；2026-10-18 复核时工作区干净，本次仅新增 §1.3 与本节两行。`h3_demo_output/` 与 `.pi/` 已进 `.gitignore` | 无 |
+| git（qwen 仓库） | ✅ 已入库（`8576dd9` 等）：小模型支持（`start-llama.sh`/`start-kvmem.sh`/`check-config.sh`/`config.example.sh`）与剧本工具（`scripts/screenplay.py` + `screenplay.system.md`）。`config.small.sh` 按设计本地（已 gitignore），`docs/SMALL_MODELS.md` 是本地笔记（并入上游前要英译+合并） | 无 |
 | ComfyUI 剧本节点 | ✅ 已进本仓库 `comfy_nodes/ComfyUI-QwenScript/`；ComfyUI 侧是符号链接（`scripts/install_qwen_node.local.sh` 幂等重装，遇真目录会拒绝覆盖） | 换机 = 一条安装命令 + 拉权重，不再有"只在本机"的孤本 |
 | 模型清单 | `models/MANIFEST.tsv`（18 个模型 / 59.53 GiB / 主源+备用源+sha256 的唯一记录）+ `scripts/fetch_models.sh`（断点续传，自检 5/5） | 换机/重装照它拉权重；权重本身不进 git（`.gitignore` 只放行 MANIFEST.tsv） |
 | T8 节点包 | 未安装 | 4/6 档位不可用 |
 | PDD 档 | 未实测（缺 master 环境 + node pack） | — |
 | i2v 档 | ✅ **已实测**（2026-10-18，§3.5 / §5.2）：成片档三次跑通、同 seed 逐字节可复现、换首帧确实换片子 | 首帧按 640×352 自备（§3.5） |
 | i2v 首帧叠影 | 只证到"图与提示词打架"这一层（§5.2 R2）：未跑"卡通图 + 卡通提示词"对照，所以还不能断定成因是提示词冲突还是图像类型 | 想钉死成因再跑一次（≈220s，命令同 §3.5 换 --prompt） |
+| 并发压测 · RAM 断言 | 只做了**串行错峰**实测（§1.3）；显存侧有 `min_free_vram_mib=19700` 断言，**内存侧没有任何断言**（H3 staging 13.5 GB 与 LLM 页缓存同抢，退化到 swap 不报错） | 想上"多模型同时跑"之前先补这两项 |
 | `h3turing` 命令 | 未装进 PATH，用 `scripts/h3turing.local.sh` 包装（纯标准库，无需装包） | 无 |
 | python3.10-dev | 未安装（无 sudo 权限） | 目前靠 §4.1 绕过 |
 
