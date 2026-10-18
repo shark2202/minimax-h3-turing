@@ -7,3 +7,8 @@ python/src/*.egg-info/
 
 # demo 输出（h3turing/standalone 默认 --out 目录，跑一次就生成）
 h3_demo_output/
+
+# pi 会话目录（本地）
+.pi/
+models/*
+!models/MANIFEST.tsv
