@@ -73,7 +73,7 @@ node's `prompt` output instead of a literal, so **"write the 剧本 → render" 
 asks a local small Qwen3.8-9B (uncensored build) for a shot-by-shot screenplay; `shot` picks which shot,
 `reuse_script` reuses the generated `.shots.json` so later shots need no further model call.
 
-- Needs `comfy_nodes/ComfyUI-QwenScript/` (tracked here; `scripts/install_qwen_node.local.sh` symlinks it into ComfyUI) + the `~/models/Qwen3.8-9B-heretic/` weights
+- Needs `comfy_nodes/ComfyUI-QwenScript/` (tracked here; `scripts/install_qwen_node.local.sh` symlinks it into ComfyUI) + the `~/ai-work/models/llm/Qwen3.8-9B-heretic/` weights
 - 22 GB cannot hold both the LLM and H3, so the node staggers them: it unloads ComfyUI's cache, starts the
   server, and kills only the one it started
 - Details, measured numbers and the pure-CLI version: `RUNBOOK.local.md` §3.6 and `qwen3.8-2080ti-256k/docs/SMALL_MODELS.md`

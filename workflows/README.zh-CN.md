@@ -72,7 +72,7 @@ PDD 官方蒸馏 LoRA（8 步）+ T8 缓存的组合拳：**目前最快档，�
 `prompt` 输出，于是**"写剧本 → 出片"在同一次排队里跑完**。节点让本机的小参数 Qwen3.8-9B（去审查版）
 写逐镜剧本；`shot` 选第几镜，`reuse_script` 复用已生成的 `.shots.json` 逐镜出片。
 
-- 依赖：`comfy_nodes/ComfyUI-QwenScript/`（本仓库跟踪；`scripts/install_qwen_node.local.sh` 符号链接进 ComfyUI）+ `~/models/Qwen3.8-9B-heretic/` 权重
+- 依赖：`comfy_nodes/ComfyUI-QwenScript/`（本仓库跟踪；`scripts/install_qwen_node.local.sh` 符号链接进 ComfyUI）+ `~/ai-work/models/llm/Qwen3.8-9B-heretic/` 权重
 - 22 GB 显存装不下 LLM 与 H3 两套 → 节点自己错峰：先卸载 ComfyUI 缓存，生成完只杀自己拉起的服务
 - 细节、实测数字与纯命令行版本见 `RUNBOOK.local.md` §3.6 与 `qwen3.8-2080ti-256k/docs/SMALL_MODELS.md`
 

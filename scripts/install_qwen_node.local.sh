@@ -34,5 +34,5 @@ echo "flow -> $WF_DST/$(basename "$WF_SRC")"
 echo
 echo "next: restart ComfyUI, then"
 echo "  curl -s 127.0.0.1:8188/object_info/QwenScript | head -c 60"
-echo "weights (not in git): /home/a/models/Qwen3.8-9B-heretic/*.gguf"
+echo "weights (not in git): /home/a/ai-work/models/llm/Qwen3.8-9B-heretic/*.gguf"
 echo "  sha256 + fetch command: qwen3.8-2080ti-256k/docs/SMALL_MODELS.md"
