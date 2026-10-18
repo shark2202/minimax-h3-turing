@@ -29,6 +29,8 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png --prom
 # ④ 停止服务
 pkill -f "main.py --listen"
 ```
+手册里的三张"账本"：**§1.1 模型清单**（18 件 / 59.53 GiB + 出处 + sha256）、**§1.2 显存账本**（22 GB 卡的占用实测与卸载机制）、
+**§5.x 实测基线**（t2v / i2v / 剧本→出片链的耗时与产物）；验收怎么算"成了"见 **§5.4 验收四层**。
 
 Mac 上：浏览器开 `http://192.168.100.2:8188/`（不通就换 `192.168.8.189`，装了 tailscale 用 `100.69.133.37`）。
 
@@ -69,6 +71,73 @@ clip_projections/mmh3-4b-ClipProj-celeb-mlp.safetensors            304 MB   275b
 全机 **18 个模型 / 59.53 GiB**（H3 9 + SDXL 1 + 27B 6 + 9B 1 + chat 模板 1）统一登记在
 `models/MANIFEST.tsv`（`sha256 | 字节数 | 目标路径 | 主源 | 备用源 | 角色`），校验与下载都用 `scripts/fetch_models.sh`：
 
+| 处 | 文件 | 大小 | sha256（前 12 位；全值见清单） | 角色 |
+|---|---|---:|---|---|
+| `ai-work/models/` | `diffusion_models/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors` | 11.68 GiB | `01aa7b92c007` | H3 主模型 W4A8 mixed（t2v/i2v 共用） |
+| `ai-work/models/` | `text_encoders/qwen3vl_4b_fp8_scaled.safetensors` | 4.88 GiB | `54bd5144df0b` | H3 文本编码器（工作流里用别名 int4_convrot） |
+| `ai-work/models/` | `vae/minimax_h3_video_vae_fp16.safetensors` | 4.85 GiB | `7c1f131492e7` | H3 视频 VAE |
+| `ai-work/models/` | `vae/minimax_h3_audio_vae_fp32.safetensors` | 0.56 GiB | `8e505d95dd15` | H3 音频 VAE（§4.5 的 NaN 就出在这一路） |
+| `ai-work/models/` | `loras/minimax_h3_fl2v_turbo_4step_v1.0_768p…safetensors` | 1.82 GiB | `c396a9a06f58` | 4 步 Turbo v1.0（成片档） |
+| `ai-work/models/` | `loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1…safetensors` | 0.29 GiB | `3a069f26fbc3` | 4 步 Turbo v0.1（compat 工作流实际引用） |
+| `ai-work/models/` | `loras/MiniMax-H3-FL2VA-Acc-8Step_comfy.safetensors` | 1.61 GiB | `71347e272513` | PDD 8 步（t2v-ultra，需 master 环境） |
+| `ai-work/models/` | `loras/MiniMax-H3-Ref2VA-Acc-8Step_comfy.safetensors` | 1.61 GiB | `d7cd9480c000` | PDD 8 步 · Ref2VA（i2v-ultra） |
+| `ai-work/models/` | `clip_projections/mmh3-4b-ClipProj-celeb-mlp.safetensors` | 0.28 GiB | `275b38999127` | ClipProj 投影头 |
+| `ai-work/models/` | `checkpoints/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors` | 6.62 GiB | `c9e3e68f89b8` | SDXL 出图（§3.4；主源 ModelScope） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/Qwen3.8-27B-EfficientThink-SimPO-Q2-LynnStyle.gguf` | 12.11 GiB | `8a84f7ef93b0` | 27B 目标（config.sh 默认） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/dflash2-qwen38-27b-Q4_K_M.gguf` | 1.06 GiB | `e83676f81b66` | 27B 草稿（DFlash2，depth 6） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/dflash2-qwen38-27b-Q8_0.gguf` | 1.92 GiB | `1086ea5d44e9` | 27B 草稿备选（多占 ~1 GiB） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/mmproj-Qwen3.8-27B-Q4_K_M.gguf` | 0.49 GiB | `0d22c439a59f` | 27B 视觉投影（可选，放主机内存） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/mtp-Qwen3.8-27B-Q4_0.gguf` | 1.56 GiB | `051a1764cff8` | MTP 头（Q2 目标无 nextn → 不可用，留档） |
+| `ai-work/models/llm/` | `Q2-LynnStyle/mtp-Qwen3.8-27B-Q8_0.gguf` | 2.95 GiB | `cbf60a0c48b4` | 同上，留档 |
+| `ai-work/models/llm/` | `Qwen3.8-9B-heretic/Qwen3.8-9B-heretic-uncensored.Q4_K_M.gguf` | 5.24 GiB | `8eb51ad276c3` | 写剧本的小模型（heretic 去审查；config.small.sh 默认） |
+| `ai-work/models/llm/` | `chat_template.jinja` | 27 KB | `c47c82b05447` | Qwen 聊天模板 v22.4（两个启动器都引用） |
+
+**合计 18 个文件 / 59.53 GiB**（H3 9 件 27.6 GiB + SDXL 1 件 6.62 + 27B 6 件 20.09 + 9B 1 件 5.24 + 模板）。
+上表与 `models/MANIFEST.tsv` 同源；§1 上方那段 9 行手写块是 10-15 下载时的原始核对记录，数值与此表一致，留作历史痕迹。
+- **2026-10-18 归集**：全机模型统一到 `/home/a/ai-work/models/`——ComfyUI 那五棵树按类型放根下（原地未动），
+  LLM 侧放进新增的 `llm/`：`llm/Q2-LynnStyle/`（27B 六件）、`llm/Qwen3.8-9B-heretic/`（9B）、`llm/chat_template.jinja`。
+  旧路径 `/home/a/models/` **已删除**；两个工程的配置与文档（`config.sh`、`config.small.sh`、`scripts/download-models.sh`、
+  `docs/MODELS.md`、`docs/SMALL_MODELS.md`、`docs/DEPLOY_UBUNTU.md`、本手册、`models/MANIFEST.tsv`）全部同步改完，
+  ComfyUI 侧 `extra_model_paths.yaml` 本来就指向 `ai-work/models`，无需改动。
+全值 sha256、字节数、主源/备用源都在清单里；`scripts/fetch_models.sh --check` 会逐行核对字节数 + sha256。
+
+### 1.2 显存账本与卸载机制（22 GB 卡）
+
+实测账本（MiB）：
+
+| 时刻 | 卡上占用 | 说明 |
+|---|---:|---|
+| 无模型 | 168–292 | 系统/显示 + 各进程 CUDA 上下文 |
+| LLM 就位（9B Q4 + 64K q8_0 KV） | **6808** | 权重 5.24 GiB + KV ~1.35 GiB + workspace |
+| H3 常驻 / 采样峰值 | 17444 / **18926** | DiT + 动态装载的 VAE/TE（日志 `4965MB Staged`） |
+| **两者同住的峰值** | **25734** | 超 22528 → **任何时刻都不能同时在场** |
+
+卸载三层（"腾显存"能成功的全部原因）：
+
+1. **进程内丢引用**：`unload_all_models()` 其实就是 `free_memory(1e30, device)`（`comfy/model_management.py:2063`）
+   → 对每个 `ModelPatcher` 调 `detach()`（`comfy/model_patcher.py:1295`：`eject_model()` + 补丁搬到 offload 设备 +
+   `unpatch_model(unpatch_weights=True)`）→ 对象变 `real_model() is None`，`cleanup_models()` 弹表 + `gc.collect()`
+2. **把块还给驱动**：`soft_empty_cache()`（`comfy/model_management.py:2045`）= `torch.cuda.synchronize()` +
+   `torch.cuda.empty_cache()` + `ipc_collect()`。**只有这一步做完，别的进程才看得见那些空闲**——只做第 1 步，
+   torch 的缓存分配器仍替自己留着块。实测落差 **17444 → 168 MiB**
+3. **ComfyUI 自己的预留**（不信任 OS）：`--reserve-vram 2.5` → `EXTRA_RESERVED_VRAM`（`:853`），
+   `minimum_inference_memory()` 永不动用最后 2.5 GB；`--vram-headroom 0.5` 交给 `comfy_aimdo` 做显存压力管理；
+   0.33 的**动态显存装载**按模型声明的 `get_dynamic_vram__units()` 从主机内存流式上位
+   → 22.5 GB 卡实际可用 ≈19.7 GB，H3 峰值 18926 MiB 时仍余 ~3.6 GB
+
+跨进程只有一条路：**杀进程**。外部无权释放别人的 CUDA 上下文（`cudaFree` 只作用于自己的上下文），
+SIGTERM 后驱动销毁上下文 → 实测 **6808 → 260 MiB**（节点等 1.5 s 就是给这个）。
+
+顺序靠**图内依赖**保证（节点是采样器的上游 → H3 必然在节点返回之后才装载），不靠 sleep；返回前用
+`torch.cuda.mem_get_info()` 读**设备级**空闲并断言 ≥19700 MiB，不够就报错，而不是 5 分钟后收 CUDA OOM
+（`foreign_server=fail|stop|ignore` 决定对"别人起的服务"怎么办）。
+
+不能同住时的替代路径与代价：LLM 跑 CPU（`-ngl 0`，9B 28 线程几 tok/s，5 镜剧本 2–4 分钟）／换 4B（≈2.5 GB，
+理论上剩 19.7 GB ≥ 18.9 GB 峰值，但只剩 0.8 GB 余量，撞 VAE 尖峰就翻车）／半卸载（省不下多少还付 PCIe 往返）。
+
+**不保证**：有引用的张量（latent/输出/cuDNN workspace）不释放，所以腾完也不是 0；断言是某一时刻的采样、
+不是持续监控；VAE 解码尖峰归 ComfyUI 自己预算；2080Ti 没有 MPS/ECC 隔离，多进程共享靠自觉。
+
 ```bash
 cd /home/a/ai-work/minimax-h3-turing
 scripts/fetch_models.sh --list      # 清单 + 本机状态（不哈希，秒级）
@@ -85,6 +154,12 @@ scripts/fetch_models.sh --only 9b --jobs 12 --mirror hf-mirror
 - 2026-10-18 复核：18 个 sha256 与下载时记录**逐个一致**（H3 九件另见 `models/h3_all_verified.sha256`，
   27B 六件见 `qwen3.8-2080ti-256k/docs/MODELS.md`，9B 见其 `docs/SMALL_MODELS.md`）；
   续传逻辑有独立自检：120 MiB 掐断后，第二次只补缺的 75.0 MiB 且 sha256 一致
+- **`--check` 全量复核过一遍：18/18 OK，exit 0，用时 6m18s**（单线程 sha256，60 GiB → 约 160 MB/s）。
+  这才是"清单可复现"的实证：任何一件权重被换过、截断过、或下载时被污染，这一条命令都会指出是哪一行（exit 1 = 缺/长度不符，2 = sha 不符）。
+- **归集后复验（2026-10-18）**：`--check --only llm/` 对搬走的 8 件重新哈希 → **8/8 OK，exit 0，2m33s**（26 GiB）。
+  同一天还实测：27B（19810 MiB）与 9B（6776 MiB）都能从新路径加载并生成，ComfyUI 剧本→出片整链跑通
+  （`H3Lite_00014_.mp4`，节点日志显示 `starting llama-server` 走的就是新路径）。所以"搬家"是零风险操作：
+  同一文件系统内 `mv` 只改目录项，内容不动；真被换过/截断过，这一条命令会指出是哪一行。
 
 ---
 
@@ -224,7 +299,7 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png \
 
 2026-10-18 落地：**小参数 Qwen3.8 当场写剧本，同一张卡直接出片**——同一次排队跑完，不用手工倒提示词。
 
-- 权重：`/home/a/models/Qwen3.8-9B-heretic/Qwen3.8-9B-heretic-uncensored.Q4_K_M.gguf`
+- 权重：`/home/a/ai-work/models/llm/Qwen3.8-9B-heretic/Qwen3.8-9B-heretic-uncensored.Q4_K_M.gguf`
   （5.24 GiB，sha256 `8eb51ad2…c96510f`，**heretic 去审查版**——按"优先无审查"选的；
   选型、下载、实测全在 `~/ai-work/qwen3.8-2080ti-256k/docs/SMALL_MODELS.md`）
 - 节点：**源码在本仓库** `comfy_nodes/ComfyUI-QwenScript/`（同目录 README 写了显存协议），用
@@ -246,7 +321,7 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png \
   ```
 - 速度：**70 tok/s**（9B Q4_K_M + ngram-mod，无草稿），5 镜剧本 ≈ 15s
 - ⚠️ 重装/换机：节点与工作流**已进本仓库**，一条命令重装（§7 第 7 步）；**权重不进 git**
-  （`~/models/Qwen3.8-9B-heretic/`，字节数与 sha256 见 SMALL_MODELS.md，拉取见 §7 第 8 步）
+  （`~/ai-work/models/llm/Qwen3.8-9B-heretic/`，字节数与 sha256 见 SMALL_MODELS.md，拉取见 §7 第 8 步）
 
 ---
 
@@ -315,6 +390,17 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
   并让下载器对"段数不足"直接报错退出，而不是拿错字段去下文件。
 - 两个坑都是**自检先于上线**抓到的：`/tmp/resume_test.py` 起一个会记账的本地 HTTP 服务，掐断续传后
   断言"第二次只补缺的字节"（现在 5/5 PASS）。
+
+### 4.7 运维三连坑（本机实测）✅ 已固化进脚本/手册
+
+- **`pkill -f "<长字符串>"` 会匹配到它自己**：那次我把自己那条 bash 命令杀了（exit 143，命令只跑到一半就没了）。
+  用方括号技巧 `pkill -f "[Q]wen3.8-9B-heretic"`（模式里含 `[Q]`，不再自匹配），或先 `pgrep -f` 看清再杀。
+  §7 与本文里的 kill 命令都写成 `[Q]`/`[m]ain.py` 形式。
+- **长跑辅助进程必须 `setsid`**：`nohup … &` 起的显存采样器被会话回收掐掉两次（159 s、313 s），日志停在半路，
+  看着像"脚本自己退了"。§0 那条"别把常驻进程挂在会自己结束的东西下面"同样适用于采样器/监视器：
+  `setsid nohup … >/dev/null 2>&1 < /dev/null &`。
+- **`set -u` 下 `local a=1 b=$((a+1))` 会炸**（`a: 未绑定的变量`）：整条命令的所有展开发生在 `local` 赋值**之前**。
+  拆成两行。这个坑是下载器自检抓到的——当时 60 GB 的高压路径传了 **0 字节**，而不是悄悄算错。
 
 ---
 
@@ -414,10 +500,22 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 - **显存曲线**（`nvidia-smi` 1s 采样，313 样本）：节点返回前空闲 **21831 MiB** → 装载+采样**峰值 18926 MiB** 后回落到驻留 17444 MiB；
   峰值时卡上仍余 ~3.6 GB，与 `--reserve-vram 2.5 + --vram-headroom 0.5` 的预留吻合；VAE 解码那一下没有超过采样峰值。
 - 这条曲线就是节点里 `min_free_vram_mib=19700` 的来历：`18926（H3 峰值）+ 6808（LLM）= 25734 > 22528`，
+  两者**任何时刻都不能同时在场**，所以"腾显存"必须在采样器进场前完成并**当场用数字断言**，否则要在 5 分钟后收 CUDA OOM。
 - **复现性检查别用 sha256**：两条产物字节不同（696338 vs 696392），但**逐帧像素完全相同（124/124）**。
   原因是 `SaveVideo` 把整份 workflow graph 写进 MP4 的 `prompt` metadata —— 本轮只差 `seed 3013→3014` 和两个新 widget，
   字节就变了。所以"同 seed 是否复现"要比**帧数据**，不是比文件哈希（§5.1 那三条字节相同，是因为它们的 graph 真的一字不差）。
-  两者**任何时刻都不能同时在场**，所以"腾显存"必须在采样器进场前完成并**当场用数字断言**，否则要在 5 分钟后收 CUDA OOM。
+
+### 5.4 验收四层（本机通用套路：缺一层就漏判）
+
+1. **接线**（0 GPU、秒级）：`python -m unittest discover -s python/tests`、`fetch_models.sh --check`、
+   `check-config.sh`、`curl -s 127.0.0.1:8188/object_info/<节点>` —— 只证明"接对了线"，不证明有效。
+2. **真跑一次**：真渲染/真生成，而且**改一个输入值**（`seed`/`shot`/`script_out`）—— 图一字不差会命中
+   ComfyUI 执行缓存：`Prompt executed in 0.01 seconds`，什么都没跑（§5.3 的坑）。
+3. **产物断言**（"文件存在"不算）：`scripts/check_video.py` 查帧几何 / 非全黑 / 音轨峰值与 NaN /
+   首帧吻合 + 归因；日志侧 `returned 22` = 0、`ERROR lora` = 0；数值与 §5.1/§5.2 基线比对。
+4. **复现 / 回归**：同 seed 比**帧数据**（不是 sha256：MP4 里嵌了 graph metadata，改一个 widget 就换字节）；
+   sha256 只用在校验**权重与下载**（18 件 59.53 GiB 全绿是这条的基准）。
+5. **记账**：服务端耗时、峰值显存、关键数字写回 §5.x —— 没有数字的结论不算结论。
 
 ---
 

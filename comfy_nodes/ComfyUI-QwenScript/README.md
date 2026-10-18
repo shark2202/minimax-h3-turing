@@ -1,6 +1,6 @@
 # QwenScript · ComfyUI 节点
 
-让**本机的小参数 Qwen3.8**（`~/models/Qwen3.8-9B-heretic/`，heretic 去审查版）在图里写
+让**本机的小参数 Qwen3.8**（`~/ai-work/models/llm/Qwen3.8-9B-heretic/`，heretic 去审查版）在图里写
 H3 提示词或整份逐镜剧本，并把"写剧本 → 出片"串成**一次排队**。UI 里叫
 **Qwen3.8 Script (local LLM)**，分类 `MiniMax H3`。
 
@@ -29,8 +29,21 @@ pkill -f "main[.]py --listen" && setsid nohup scripts/h3_launch.local.sh >/dev/n
    而不是让采样器在 5 分钟后 CUDA OOM。别人占着显存时按 `foreign_server`：
    `fail`（默认，打印数字 + 处理办法）/ `stop`（自己停掉端口上的 llama-server）/ `ignore`
 
+机制（22.5 GB 卡上为什么这样能成）：
+- **①进程内丢引用**：`unload_all_models()` 就是 `free_memory(1e30, device)`（`comfy/model_management.py:2063`）
+  → `ModelPatcher.detach()`（`comfy/model_patcher.py:1295`）把补丁搬到 offload 设备并 `unpatch_weights` → 对象可被回收
+- **②把块还给驱动**：`soft_empty_cache()`（`:2045`）= `synchronize()` + `torch.cuda.empty_cache()` + `ipc_collect()`
+  —— 只有这步做完**别的进程**才看得见空闲（实测 17444 → 168 MiB）
+- **③跨进程只能杀**：外部无权释放别人的 CUDA 上下文；SIGTERM + 等 1.5s 让驱动销毁上下文（实测 6808 → 260 MiB）
+- 顺带：ComfyUI 自己也不孤注一掷 —— `--reserve-vram 2.5`（`EXTRA_RESERVED_VRAM`，永不动用最后 2.5 GB）、
+  `--vram-headroom 0.5`（`comfy_aimdo` 压力管理）、0.33 动态显存装载（日志 `4965MB Staged`，按
+  `get_dynamic_vram__units()` 从主机内存流式上位）→ 22.5 GB 卡可用 ≈19.7 GB，H3 峰值时仍留 ~3.6 GB
+- 想同住的替代路径与代价：LLM 跑 CPU（`-ngl 0`，9B 几 tok/s）／换 4B（≈2.5 GB，只剩 0.8 GB 余量，
+  撞 VAE 尖峰就翻车）／半卸载（省不下多少还付 PCIe 往返）
+
 **不保证**的地方：断言是"某时刻采样"，不是持续监控——检查之后有别的东西来抢显存，失败点就变成
-采样器里的 OOM；VAE 解码那一下的峰值属 ComfyUI 自己的预算（`--reserve-vram/--vram-headroom`）。
+采样器里的 OOM；有引用的张量（latent/输出/cuDNN workspace）不会被释放；VAE 解码那一下的峰值属
+ComfyUI 自己的预算（`--reserve-vram/--vram-headroom`）。
 
 ## 输入 / 输出
 
