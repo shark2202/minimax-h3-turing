@@ -359,12 +359,16 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png \
 
 `--listen 0.0.0.0` = 同网段任何人都能提交任务、浏览 `output/`、改设置。要收紧按 §2 换 `H3_LISTEN`。
 
-### 4.3 六件套里 4 个档现在打不开
+### 4.3 六件套里 4 个档现在打不开 ✅ 2026-10-19 已解 2 个
 
 档位 `t2v-draft` / `i2v-draft` / `t2v-ultra` / `i2v-ultra`（文件 `*_t8draft_api.json` ×2、`*_pdd8_t8_api.json` ×2）引用 `MiniMaxH3BlockCacheT8`，本机没装 → 提示节点缺失、图上发红。
 补：`git clone https://github.com/T8mars/comfyui-minimax-h3-blockcache-T8 ComfyUI/custom_nodes/` 后重启（v0.33.1 免升 ComfyUI，GitHub 直连正常）。
 PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干净 v0.33.1。
 
+**2026-10-19 落地**：节点包 **v1.0.4** 已装入 `custom_nodes/`，服务重启后 `object_info` 注册 `MiniMaxH3BlockCacheT8`（8 输入），`doctor` 由 FAIL 转 **PASS**；6 个档的 JSON 全部拷进 `user/default/workflows/`（7 档节点依赖零缺失）。
+`t2v-draft` 实跑验证：**160s**（服务端 `Prompt executed in 156.62s`）、`cached 2/4 model forwards, cache 175.4 MiB on cpu`、
+`check_video.py` ALL PASS（124 帧 / 640×352 / 音轨无 NaN）、`returned 22` 与 `ERROR lora` 均为 0 —— 与 `docs/08` 的 160s / 2/4 完全吻合。
+`-ultra` 两档（PDD LoRA 权重已就位、已过 sha256）仍等 master 环境，**本机不可跑**。
 ### 4.4 权重残留
 
 `models/loras/.cache/huggingface/download/` 有 ≈670 MB 的 `*.incomplete`（v1.0 LoRA 前 5 次 sha 不符留下的），可删。
