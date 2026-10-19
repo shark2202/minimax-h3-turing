@@ -30,6 +30,18 @@
 - 社区有 breaking bug 反馈，第一版不踩
 
 现状全绿时不值得动刀。
+以上结论（"现状全绿时不值得动刀"）在 2026-10-19 的社区调研后被**部分推翻**——见下节。
+## 2026-10-19 增补：社区路线调研后，判决表需重估的条目
+
+完整调研见 [13 · 社区加速方案调研](13-community-acceleration-survey.md)（含出处与证据强度标注）。对本文判决表的直接影响：
+
+| 本文条目 | 新状态 | 依据 |
+|---|---|---|
+| T8 双时钟「需 v0.34 / master」 | 已纠正（v0.33.1 可用） | 2026-10-19 本机实装节点包 v1.0.4，实跑 160s、命中 2/4，与 [08](08-t8-blockcache-4step.md) 吻合 |
+| PDD LoRA「必须升到含 #15908 的 core」 | **部分过期** | 自定义节点 `ComfyUI-MiniMax-H3-PDD-Acc`（要求 ComfyUI ≥0.33.0）在节点内部安装 head bank → **本机锁版即可解锁 `-ultra`**，不必等 v0.34.1 或走 [09](09-pdd-backport.md) 的 backport |
+| SageAttention 判死 | 维持（pip wheel + Triton 路线）；**新增一条原生 sm_75 路线** | `wjie98/comfyui-turing-utils` 提供 bundled sm75+ W8A8 attention / exact-sm75 Sage / native sm75+ Sol 稀疏注意力（需自编译 kernel 包） |
+| 「加速节点路线在 sm_75 上放弃」（[01](01-hardware-limits.md)） | **需重估** | 除上一条外，**ComfyUI 原生 `--use-ck-attention`（kitchen INT8 attention）本机内核实测可用**，且 H3 的 DiTBlock 确实走 `optimized_attention` 路径——手册现有全部基线**从未启用它** |
+| 「剩余提速空间全部压在升级窗口上」 | **需重估** | 至少还有 3 条**不需要升级**且未测的路线：kitchen INT8 attention、内置 EasyCache、PDD-Acc 节点 |
 
 ## 升级触发条件（已达成一半）
 
