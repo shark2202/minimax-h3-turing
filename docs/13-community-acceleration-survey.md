@@ -34,6 +34,7 @@ H3 是**单个 packed 序列**，注意力 `O(S²)` 而块内其余 `O(S)`——
 comfy_kitchen 0.2.31 | torch 2.14.1+cu130 | cap (7,5)
 int8_attention_is_available() -> True
 ```
+**本机已实测（2026-10-19，t2v 成片档同 seed A/B）**：提速 **1.31×**（服务端 232.46s → 177.64s），但**画面明显软化**、0/124 帧相同、PSNR 18.21 dB → **不作产线默认**，详见 `RUNBOOK.local.md` §5.5。推论：社区 ≈2× 的数字出自 20 步环境，**4 步低 NFE 没有余量吸收 INT8 量化误差**。
 
 代码路径也已确认可达 H3：`comfy/ldm/modules/attention.py` 里 `--use-ck-attention` → `optimized_attention = attention_comfy_kitchen_int8`，而 `comfy/ldm/minimax/model.py` 的 `DiTBlock` 正是调 `optimized_attention`。
 

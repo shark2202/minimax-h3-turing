@@ -540,6 +540,23 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
    sha256 只用在校验**权重与下载**（18 件 59.53 GiB 全绿是这条的基准）。
 5. **记账**：服务端耗时、峰值显存、关键数字写回 §5.x —— 没有数字的结论不算结论。
 
+### 5.5 2026-10-19 kitchen INT8 attention A/B（t2v 成片档 · 同 seed 3013 · 同提示词）
+
+唯一变量是启动参数 `--use-ck-attention`（代码路径：`optimized_attention = attention_comfy_kitchen_int8`，H3 `DiTBlock` 正是调它）：
+
+| | A 臂 baseline | B 臂 `--use-ck-attention` |
+|---|---|---|
+| 日志后端 | `Using pytorch attention` | `Using Comfy Kitchen attention` |
+| 服务端 / 客户端 | **232.46s** / 240s | **177.64s** / 180s（**-23.6%，1.31×**） |
+| 同 seed 帧数据 | 基准 | **0/124 帧相同**；逐帧 \|Δ\| mean 17.08（14.49–18.74）；**PSNR 18.21 dB** |
+| 音轨 | peak 0.9522，无 NaN | peak 0.9372，无 NaN；\|Δ\| mean 0.060 |
+| 全黑帧 | 0 | 0 |
+| 目检（frame 0 / 123） | 前景竹叶、刀鞘衣纹细节密实 | **明显软化、"蜡感"**，微细节退化 |
+
+**判决：不进产线默认。** 1.31× 提速是真的，但既破坏成片档的同 seed 可复现性，又掉微细节——4 步低 NFE 的轨迹没有余量吸收 Q/K/V 的 INT8 量化误差（对照：`docs/08` 的 T8 激进档 PSNR 14 dB 但目检"构图完整、无伪影"，属于同质量不同画面；本次是质量退化）。
+服务已恢复为**不带该 flag** 的原始启动配置（pytorch attention）。
+**未验**：8 步（PDD）路线下重测——社区 ≈2× 的数字出自 20 步环境，步数越多量化误差越有被校正的余量；与 T8 草稿档叠加（机理正交：缓存跳过 forward vs 注意力内核），若成立草稿档可能落到 ~120s，且草稿档本就不追求可复现。完整调研见 [docs/13](docs/13-community-acceleration-survey.md)。
+
 ---
 
 ## 6. 尚未固化 / 待办
