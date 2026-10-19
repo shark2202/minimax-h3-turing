@@ -41,13 +41,13 @@ Mac 上：浏览器开 `http://192.168.100.2:8188/`（不通就换 `192.168.8.18
 | 项 | 值 |
 |---|---|
 | GPU | RTX 2080Ti 22G（Turing sm_75，driver 580.178.04，可用显存 21.5 GiB） |
-| ComfyUI | **v0.33.1**，`git status` 干净、无本地补丁 |
+| ComfyUI | **v0.33.1** @ commit **`72865f4f`**（`git describe` 精确命中 tag），`git status` 干净、无本地补丁。**版本已锁：不要 `git pull`、不要原地升级**——版本在这里是能力边界也是故障边界，理由与升级触发条件见 `docs/07`；基线数字（280/160/420s）全部绑在这一个版本上 |
 | 解释器 | `/home/a/ai-work/ComfyUI/.venv/bin/python`（torch **2.14.1+cu130**、PyAV 17.1、comfy_kitchen 可用） |
 | 权重树 | `/home/a/ai-work/models`（经 `ComfyUI/extra_model_paths.yaml` 挂载），H3 9 文件 ≈29.6 GB，sha256 全部核对通过；**全机 18 个模型的统一清单见 §1.1** |
-| 节点 | 原生 H3（`comfy_extras/nodes_minimax_h3.py`）+ `custom_nodes/ComfyUI-ClipProj` |
+| 节点 | 原生 H3（`comfy_extras/nodes_minimax_h3.py`）+ `custom_nodes/ComfyUI-ClipProj`、`ComfyUI-QwenScript`、`comfyui-minimax-h3-blockcache-T8`（v1.0.4，2026-10-19 装） |
 | 网卡 | `192.168.100.2`（enp4s0）/ `192.168.8.189`（USB 网卡）/ `100.69.133.37`（tailscale） |
 | 磁盘 | `/` 余量 ≈749 GB |
-| 缺的东西 | `python3.10-dev`（无 Python.h）、T8 BlockCache 节点包、master 环境 |
+| 缺的东西 | `python3.10-dev`（无 Python.h）、master 环境（v0.34.1+ 或 `docs/09` 的 backport；`-ultra` 两档的唯一前置）。（T8 BlockCache 节点包 ✅ 2026-10-19 已装，见 §4.3） |
 
 权重清单与核对结果（`sha256sum` 实测 vs 上游 LFS oid）：
 
