@@ -2,7 +2,7 @@
 
 > 这份是**本机（a@2080Ti-22G 服务器）专属**的落地记录，不是上游 handbook 的一部分。
 > 上游原理与实测数据见 `docs/`，这里只写"在这台机器上怎么跑"。
-> 最后更新：2026-10-18（新增 §1.3「共存/同时/并行」三问的结论；图生视频 i2v 实测三次跑通 + 产物断言脚本 `scripts/check_video.py`；上一条：2026-10-15 首次部署并实测跑通 t2v 成片档）
+> 最后更新：2026-10-19（新增 §8 候选路线评估「H3 出初版 → LTX-2.5 精修」，**已评估未实施**；上一条 2026-10-18：§1.3「共存/同时/并行」三问；图生视频 i2v 实测三次跑通 + 产物断言脚本 `scripts/check_video.py`；更早：2026-10-15 首次部署并实测跑通 t2v 成片档）
 
 ---
 
@@ -333,7 +333,9 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png \
       --shots 5 --seed 3013 --out ~/ai-work/minimax-h3-turing/h3_demo_output/screenplay_bamboo
   pkill -f "[Q]wen3.8-9B-heretic-uncensored"   # 出片前腾显存；[Q] 是为了不让 pkill 匹配到自己
   ```
-- 速度：**70 tok/s**（9B Q4_K_M + ngram-mod，无草稿），5 镜剧本 ≈ 15s
+- 速度：**68–70 tok/s**（9B Q4_K_M + ngram-mod，无草稿），5 镜剧本 ≈ 15s。节点的 `thinking` 已改用
+  `chat_template_kwargs`（OpenAI 的 `reasoning_effort` 在本引擎是 **no-op**，实测 none/low/默认三档行为一样）；
+  27B 上关思考 60.7 tok/s vs `low` 41.5——接受率 0.79 vs 0.42，细节与矩阵见 `SMALL_MODELS.md`「归集后验证」
 - ⚠️ 重装/换机：节点与工作流**已进本仓库**，一条命令重装（§7 第 7 步）；**权重不进 git**
   （`~/ai-work/models/llm/Qwen3.8-9B-heretic/`，字节数与 sha256 见 SMALL_MODELS.md，拉取见 §7 第 8 步）
 
@@ -413,6 +415,9 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 - **长跑辅助进程必须 `setsid`**：`nohup … &` 起的显存采样器被会话回收掐掉两次（159 s、313 s），日志停在半路，
   看着像"脚本自己退了"。§0 那条"别把常驻进程挂在会自己结束的东西下面"同样适用于采样器/监视器：
   `setsid nohup … >/dev/null 2>&1 < /dev/null &`。
+- **方括号技巧只防"模式匹配到自己"，挡不住同一条命令行里的其它文本**：`pkill -f "[l]lama"` 第二次把我自己那条命令
+  杀了——因为该命令行里还写着 `start-llama.sh`，里面就含 "llama"。稳妥做法：**`pkill -x llama-server`**（按进程名精确匹配）
+  或先 `pgrep -ax` 看清再杀。
 - **`set -u` 下 `local a=1 b=$((a+1))` 会炸**（`a: 未绑定的变量`）：整条命令的所有展开发生在 `local` 赋值**之前**。
   拆成两行。这个坑是下载器自检抓到的——当时 60 GB 的高压路径传了 **0 字节**，而不是悄悄算错。
 
@@ -547,6 +552,7 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 | i2v 档 | ✅ **已实测**（2026-10-18，§3.5 / §5.2）：成片档三次跑通、同 seed 逐字节可复现、换首帧确实换片子 | 首帧按 640×352 自备（§3.5） |
 | i2v 首帧叠影 | 只证到"图与提示词打架"这一层（§5.2 R2）：未跑"卡通图 + 卡通提示词"对照，所以还不能断定成因是提示词冲突还是图像类型 | 想钉死成因再跑一次（≈220s，命令同 §3.5 换 --prompt） |
 | 并发压测 · RAM 断言 | 只做了**串行错峰**实测（§1.3）；显存侧有 `min_free_vram_mib=19700` 断言，**内存侧没有任何断言**（H3 staging 13.5 GB 与 LLM 页缓存同抢，退化到 swap 不报错） | 想上"多模型同时跑"之前先补这两项 |
+| H3→LTX-2.5 两段式 | **已评估，未实施**（§8）。同款卡有外部实测（1344×768 带音频，热 165s / 冷 178s），但本机缺三个前置：内存 31 GB（那台 128 GB）、盘 1.2 GB/s（那台 2.3 GB/s）、SA 1.0.6 锁 torch 2.6 而本机是 2.14 | 真要上：先加内存 + 另建一个实例 + 下 45–50 GB 权重 |
 | `h3turing` 命令 | 未装进 PATH，用 `scripts/h3turing.local.sh` 包装（纯标准库，无需装包） | 无 |
 | python3.10-dev | 未安装（无 sudo 权限） | 目前靠 §4.1 绕过 |
 
@@ -572,3 +578,83 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 9. 剧本链路自检：`cd ~/ai-work/qwen3.8-2080ti-256k && CONFIG_PATH=config.small.sh scripts/check-config.sh`
    （草稿应显示 `absent (optional)`）→ `CONFIG_PATH=config.small.sh scripts/start-llama.sh` →
    `python3 scripts/screenplay.py --brief "竹林剑客，黑色电影" --shots 3 --out /tmp/t`（≈15s，70 tok/s）
+
+---
+
+## 8. 候选路线评估：H3 出初版 → LTX-2.5 精修（**已评估，未实施**）
+
+> 2026-10-19 评估。结论：**本机现状跑不了**，缺三个前置（见 §8.3）。**未下载任何权重、未装任何节点、未改任何环境。**
+> 外部依据：<https://ai-muninn.com/en/blog/solh3-two-stage-on-2080ti>（2026-09-14，09-16 更新）；
+> 可下载工作流与步骤 <https://huggingface.co/coolthor/H3-Super-Acceleration-Turing>（含 `TURING.md`）；
+> LTX 精修 GGUF <https://huggingface.co/agosh/LTX-2.5-Comfy-GGUF>。**两个 HF repo 都是 gated。**
+
+### 8.1 这条路线是什么
+
+NVIDIA 官方的 **MiniMax H3 Super Acceleration**（发布在 Sol Engine 框架下）：H3 出 672×384 草稿（4 步）→ LTX-2.5 三步精修到 2× → **1344×768 / 121 帧 / 5.04s / 24fps / 带音频**。
+四个易混名字：**H3 Super Acceleration** 是方法，**Sol Engine** 是框架，**Sol-H3** 是 NVIDIA 在 DGX Spark 上的实现，**Sol-Attn** 是 stage 2 用的稀疏注意力内核。
+⚠️ 参数以 NVIDIA 的 **Spark 线**为准（672×384 草稿 / 124 帧 / 4 步草稿 + 3 步精修 / 输出 1344×768）；GB200 页面的 896×512 草稿属于另一条线。
+
+### 8.2 同款卡的外部实测基线（**不是本机数字**）
+
+改装 2080 Ti 22G / sm_75 / 2018 年 Turing；Linux + torch 2.6.0+cu124 + triton 3.2.0 + Python 3.12 + ComfyUI 0.31.0 + comfy-kitchen 0.2.28 + sageattention 1.0.6：
+
+| 项 | 值 |
+|---|---|
+| 热跑 / 冷跑 | **165 s / 178 s**（三次中位数，抖动 1.08 s）；冷热差 13 s = 读权重 |
+| 首次（Triton 内核缓存被清） | **190 s**，重启 ComfyUI 后必付一次（SageAttention 六个内核重编约 12 s） |
+| 两阶段权重 | **53.97 GiB**，22 GB 卡从不同时装下全部；正确的一跑会打印 `loaded partially ... 2861 MB offloaded` |
+| 依赖的机器条件 | **128 GB 系统内存** + ext4 NVMe 实测 **2.3 GB/s** |
+| 分辨率阶梯（同工作流，只改草稿尺寸） | 672×384→1344×768 = 167 s；**544×320→1088×640 = 117 s（作者推荐）**；432×240→864×480 = 77 s（明显发虚） |
+
+作者的结论句（决定了本节的评估口径）：**"决定这台机器能不能干这活儿的约束不是显存，而是快速存储 + 足够吸收 offload 的系统内存。"**
+
+### 8.3 本机 vs 那台：三个卡点
+
+| 维度 | 那台 | 本机 | |
+|---|---|---|---|
+| GPU / 可用显存 | 2080 Ti 22G sm_75 / 22 GB | 同款 / 21832 MiB | ✅ |
+| **系统内存** | 128 GB | **31 GB**（available 27，**swap 只有 1 GB**） | ❌ |
+| **系统盘速度** | ext4 NVMe 2.3 GB/s | ext4 NVMe **1.2 GB/s**（2026-10-19 `dd iflag=direct` 实测 4 GiB） | ❌ |
+| 53.97 GiB 权重的可缓存性 | 装得下 | 页缓存装不下 → 每次冷读 | ❌ |
+| torch | 2.6.0+cu124 | 2.14.1+cu130 | ❌ 与 SA 1.0.6 互斥 |
+| comfy-kitchen / ComfyUI / py | 0.2.28 / 0.31.0 / 3.12 | 0.2.31 / 0.33.1 / 3.10.12 | ⚠️ |
+| sageattention | 1.0.6 + Triton 补丁 | 试过 2.2.0 → 进程级崩溃（`docs/03` / §4.1） | ❌ |
+| 磁盘余量 | — | 737 GB（够放 45–50 GB 新权重） | ✅ |
+
+### 8.4 SageAttention 在这条链上是**可行性项**，不是优化项
+
+| 配置 | 冷跑 | 暖跑 |
+|---|---:|---:|
+| SageAttention 1.0.6 | 178 s | 165 s |
+| 关掉（pytorch SDPA） | 213 s | **OOM，约 4 s 后死** |
+
+装了 1.0.6 **还不够**：Turing 共享内存上限 65536 B，它的 Triton kernel 要 **67584** → Triton 拒绝 → ComfyUI **静默回退**到 pytorch attention。要把 `site-packages/sageattention/` 下 6 个 `attn_qk_int8_*.py` 的 `num_stages=3` 改成 `1`（`2` 正好卡在 65536，仍差那 2048 B）。
+⚠️ **不要动 `BLOCK_M`**：它决定 `q_scale` 的形状（`(qo_len + BLKQ - 1) // BLKQ`），改了就静默读错缩放或越界 —— 判据是"一个常数如果决定某个 tensor 的形状，它就不是调度参数"。
+本机 `docs/03` 的结论（孤立内核能跑、2.2.0 接管线必炸）与此一致；**当时缺的是"1.0.6 必须打补丁"这一步**，所以那条"torch 2.6 环境可以试 1.0.6"现在才算有实测支撑。
+
+### 8.5 六处改动，其中三处**静默失败**
+
+| # | 改动 | 不做会怎样 |
+|---|---|---|
+| 1 | 两个 HF repo 都要在浏览器接受条款 + `hf auth login` | 401（H3 那份另有地域限制条款） |
+| 2 | H3 六件取自 `coolthor/...`；**LTX 精修必须用 GGUF Q4_K_M** | ⚠️ **静默失败 1**：官方 int8-convrot 在 sm_75 上跑完返回 `status: success`、mp4 几何/编码/音轨全对，**每像素恰好 RGB(0,0,0)**（精修后 latent 2064384/2064384 全 NaN）。换 GGUF 即正常，且更小（11.38 vs 20.03 GiB） |
+| 3 | 两个节点包（`T8mars/comfyui-minimax-h3-audio-T8`、`city96/ComfyUI-GGUF`）+ `ComfyUI-CondCache` 单文件 + `ComfyUI-LTXV-Turing-FP16` 启动适配器 | 缺 CondCache 会报"节点不存在"，害人去找已经在盘上的权重 |
+| 4 | LTX 三个 bf16 文件（video VAE / audio VAE / x2 upscaler）转 fp16 | ComfyUI 把 bf16 upcast 到 fp32，白吃约 2.7 GB（1.35 GiB 的文件在卡上占 2769.87 MB）。转换脚本必须保留 safetensors header 的 `config` 键，否则 VAE 形状不匹配 |
+| 5 | sageattention **1.0.6** + Triton `num_stages` 补丁（§8.4） | ⚠️ **静默失败 3**：回退 pytorch attention → 暖跑 OOM |
+| 6 | 工作流里 node15 = `UnetLoaderGGUF`、node16 `attention_backend = dense_reference` | ⚠️ **静默失败 2**：Sol-Attn 内核只吃 bf16，Turing 上永远返回 dense 且**什么都不打印**（`verbose=False` + `_log_once` 按 `(shape, reason)` 去重，"日志里没有消息"无法区分"没触发"和"被去重"）；想证伪要用 `sol_attn_stats()` 的 `sparse` 计数 |
+
+附带一条：**`--fp16-unet` 对量化模型无效**（`comfy/sd.py` 里量化模型走 `unet_manual_cast(None, ...)` 分支，标志只改存储 dtype 不改计算 dtype），症状是 `weight dtype torch.float16, manual cast: torch.float32`，慢 33%。那台用启动适配器修（只在 `get_device_capability() == (7,5)` 时生效，所以对别的卡惰性）。
+
+### 8.6 真要动的时候的顺序（评估建议，**未执行**）
+
+1. **别动现在的 ComfyUI**（0.33.1 + torch 2.14 + kitchen 0.2.31 跑 t2v/i2v 是稳的），另建第二个实例装 torch 2.6 + kitchen 0.2.28 + SA 1.0.6 + Python 3.12；同一张卡同一时刻只起一个。
+2. **先加内存**（X99 平台，31 → 64/128 GB）：这是最便宜的解锁，顺带解掉"swap 只有 1 GB"这个雷。
+3. 最小验证：先只下 LTX 那一半（GGUF 11.38 GiB + 三个 VAE/upscaler ≈ 2.7 GB ≈ **14 GB**），单独确认精修阶段能出片。⚠️ 但这等于把本机现有 H3 产物（640×352 / w4a8 / 4B 编码器）喂给 LTX —— **是没人验证过的组合**；外部验证过的只有 `TURING.md` 那一整套（含 13.2 GiB 的 32B heretic 编码器与配套 cond cache）。
+4. 一次到位就照 `TURING.md` 抄（约 45–50 GB 下载 + 换栈 + 加内存）。
+
+### 8.7 不确定 / 未验证
+
+- **31 GB 内存够不够是本次评估最大的未知数**：作者写的是机器规格 128 GB，不是实测下限；这条链的峰值主机内存没有量过。要上必须先量一次。
+- 我们那个"最小验证"本身就是未验证组合（8.6 第 3 步）。
+- 外部那份把结论**限定在自己的版本集**内（ComfyUI 0.31.0 / kitchen 0.2.28 / torch 2.6）：它没有隔离 NaN 是权重、反量化还是内核造成的。本机版本更新，**同一个 GGUF 在本机是否仍然正确，没有证据**。
+- 两个 repo 是 gated，本机没有访问权 → **本次没试下载**，所有数字均为外部证据或本机只读测量。
