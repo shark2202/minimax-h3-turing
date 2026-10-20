@@ -73,6 +73,7 @@ int8_attention_is_available() -> True
 - **不与任何蒸馏 LoRA 叠加**（lightx2v turbo 等）；**不与 blockcache / EasyCache 叠加**；角色 LoRA 可叠
 - 风险：FL2VA / Ref2VA 配错**静默出错**（带 fingerprint 校验：trunk 相对距离 0.0503、容差 0.015、cast 噪声 ~2e-3）
 - 权重放 `ComfyUI/models/pdd_acc/`（本机已有 Kijai 转换版两个 PDD 文件，sha256 已核对，见 `models/MANIFEST.tsv`）
+- ⚠️ **格式陷阱（本机实测 2026-10-19）**：`Kijai/MiniMax-H3-experimental` 的 `MiniMax-H3-*-Acc-8Step_comfy.safetensors` **不被这个节点接受** —— 报 `has no 'proj_out.weight' — not a PDD Acc file from alibaba-pai/MiniMax-H3-Acc-LoRAs (or a converted copy)?`。Kijai 那版是按 **core 的 `set_bias` / `reshape_weight` 布局**打包的（给 master 路线用），本节点认的是原版 `proj_out` / `audio_proj_out` 堆叠布局。**必须用 alibaba-pai 原版或 aptech0081 预转换版**（后者仓库已改名为 `aptech0081/MiniMax-H3-PDD-ComfyUI`）
 - 适配 pruned / w4a8 再量化：通过 adaln rebasing（拟合残差 ~1.4e-5）
 
 ### 2.2 Zironic/H3-Optimizations
