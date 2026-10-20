@@ -16,8 +16,9 @@ from h3turing.tiers import reproducible_only  # noqa: E402
 
 
 class TestTiers(unittest.TestCase):
-    def test_six_tiers_present(self):
-        self.assertEqual(len(TIERS), 6)
+    def test_tiers_present(self):
+        self.assertEqual(len(TIERS), 8)  # 出厂六件套 + 2026-10-20 新增的 PDD-Acc 两档（节点路线，免 master）
+        self.assertTrue({"t2v-final", "t2v-draft", "i2v-final", "i2v-draft", "t2v-ultra", "i2v-ultra"} <= set(TIERS))
 
     def test_reproducibility_discipline(self):
         """The core rule: T8 tiers are drafts (not reproducible), plain tiers are finals."""
