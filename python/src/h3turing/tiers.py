@@ -62,6 +62,16 @@ TIERS: dict[str, Tier] = {
         measured_s=260,
         notes="-38%; the absolute saving (160 s) beats t2v drafts - pricier shots save more.",
     ),
+# PDD 8-step via the ComfyUI-MiniMax-H3-PDD-Acc node (no master upgrade needed)
+    "t2v-pddacc8": Tier(
+        key="t2v-pddacc8", route="t2v",
+        workflow="h3_w4a8_t2v_pddacc8_api.json",
+        lora="MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+        steps=8, t8=False, reproducible=True, env="0.33.1+ (needs PDD-Acc node)",
+        measured_s=399,
+        notes="PDD 8-step through the ComfyUI-MiniMax-H3-PDD-Acc node: no master upgrade. "
+              "The node owns the sigmas (euler only), and forbids turbo/cache nodes on top.",
+    ),
     "t2v-ultra": Tier(
         key="t2v-ultra", route="t2v",
         workflow="h3_w4a8_t2v_pdd8_t8_api.json",

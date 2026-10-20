@@ -7,6 +7,8 @@ python/src/*.egg-info/
 
 # demo 输出（h3turing/standalone 默认 --out 目录，跑一次就生成）
 h3_demo_output/
+# A/B 实验产物（同 seed 对拍用的 mp4 与并排目检图）
+h3_ab/
 
 # pi 会话目录（本地）
 .pi/

@@ -573,6 +573,30 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
 服务已恢复为**不带该 flag** 的原始启动配置（pytorch attention）。
 **未验**：8 步（PDD）路线下重测——社区 ≈2× 的数字出自 20 步环境，步数越多量化误差越有被校正的余量；与 T8 草稿档叠加（机理正交：缓存跳过 forward vs 注意力内核），若成立草稿档可能落到 ~120s，且草稿档本就不追求可复现。完整调研见 [docs/13](docs/13-community-acceleration-survey.md)。
 
+### 5.6 2026-10-20 PDD-Acc 8 步首跑（`t2v-pddacc8` · 同 seed 3013 · 同提示词）
+
+路线：**不改动锁定的 v0.33.1**，用自定义节点 `ComfyUI-MiniMax-H3-PDD-Acc` 自己装 head bank（原 `docs/07`/`09` 认为必须 master backport，现被绕过）。
+量化基础是本机 **pruned w4a8 mixed** 模型 + **alibaba-pai 原版**权重（`models/pdd_acc/`，sha256 已入库 `MANIFEST.tsv`）。
+
+日志证据（三项校验全过）：
+
+```
+MiniMaxH3PDDAccApply: partition check ok: fl2va file on fl2va model (fl2va 0.0002, ref2va 0.0503)
+MiniMaxH3PDDAccApply: MiniMax-H3-FL2VA-Acc-8Step.safetensors (original) steps=8 blocks=4,4,4,4,4,4,4,4, 258 lora modules, heads fused
+MiniMaxH3PDDAccApply: pruned model: 50 adaln modules rebased onto the fl2va curve basis
+```
+
+| | t2v-final（4 步 turbo） | **t2v-pddacc8（8 步 PDD）** |
+|---|---|---|
+| 服务端 | 232.46s | **398.99s** |
+| 断言 | ALL PASS | ALL PASS（124 帧 / 640×352 / 无 NaN） |
+| 与 baseline 帧差 | 基准 | PSNR **12.45 dB**，0/124 相同 |
+| 音轨 | peak 0.9522 / RMS **−14.6 dBFS** / 近静音 0.93% | peak 0.0569 / RMS **−41.5 dBFS** / 近静音 **10.46%** |
+| 目检 | 主体近景、竹林细节密实 | **构图推向远景（主体成远处小黑点）、细节发软** |
+
+**判决：`-ultra` 能力已解锁，但首跑质量可疑，暂不进产线。** 三个候选原因（未分辨）：① 本机是 **pruned w4a8** 再量化，官方 PDD 结果是 bf16 —— adaln rebasing 虽报成功，误差仍可能被 8 步轨迹放大；② 8 步下 PDD 与 4 步 turbo 本就不是同一轨迹（构图偏移可接受，但**音轨低 ~27 dB** 不像"同质量不同画面"）；③ SigmaShift/audio scale 与 head bank 的耦合细节。
+**复验顺序建议**：换 seed 一次（看是否系统性）→ 再试 `nfe=4`（官方也认的档）→ 必要时换 bf16/int8 未剪枝底模对照。
+
 ---
 
 ## 6. 尚未固化 / 待办
