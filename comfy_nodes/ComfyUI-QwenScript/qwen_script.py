@@ -248,7 +248,8 @@ class QwenScript:
                     "response_format": {"type": "json_object"},
                 }
                 if thinking != "medium":
-                    payload["reasoning_effort"] = thinking
+                    # chat_template_kwargs 才是真正生效的开关：OpenAI 的 reasoning_effort 字段本引擎不映射（实测 no-op）
+                    payload["chat_template_kwargs"] = {"reasoning_effort": thinking}
                 t1 = time.time()
                 try:
                     data = script_mod.post_json(base + "/chat/completions", payload, timeout_s)
