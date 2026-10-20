@@ -72,6 +72,16 @@ TIERS: dict[str, Tier] = {
         notes="PDD 8-step through the ComfyUI-MiniMax-H3-PDD-Acc node: no master upgrade. "
               "The node owns the sigmas (euler only), and forbids turbo/cache nodes on top.",
     ),
+# Same node route at nfe=4 (officially sanctioned: two blocks per step) - the only PDD
+    # configuration that can compete with the 4-step turbo tier on speed.
+    "t2v-pddacc4": Tier(
+        key="t2v-pddacc4", route="t2v",
+        workflow="h3_w4a8_t2v_pddacc4_api.json",
+        lora="MiniMax-H3-FL2VA-Acc-8Step.safetensors",
+        steps=4, t8=False, reproducible=True, env="0.33.1+ (needs PDD-Acc node)",
+        measured_s=227,
+        notes="PDD at nfe=4 via the PDD-Acc node: same 4 forwards as the turbo tier, so it competes on speed, not just quality.",
+    ),
     "t2v-ultra": Tier(
         key="t2v-ultra", route="t2v",
         workflow="h3_w4a8_t2v_pdd8_t8_api.json",
