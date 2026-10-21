@@ -62,6 +62,16 @@ TIERS: dict[str, Tier] = {
         measured_s=260,
         notes="-38%; the absolute saving (160 s) beats t2v drafts - pricier shots save more.",
     ),
+# FastH3 4-step DMD2 distill (FastVideo) - plain LoRA swap on the pruned fl2va base,
+    # so it stays same-seed reproducible and needs no new node.
+    "t2v-fasth3": Tier(
+        key="t2v-fasth3", route="t2v",
+        workflow="h3_w4a8_t2v_fasth3_api.json",
+        lora="minimax_h3_fl2va_fasth3_preview_v0.2_lora_pruned_rank128_fp16.safetensors",
+        steps=4, t8=False, reproducible=True, env="0.33.1+",
+        measured_s=0,
+        notes="4-step DMD2 distill; euler + simple (the trained ladder), cfg 1.0 via BasicGuider.",
+    ),
 # PDD 8-step via the ComfyUI-MiniMax-H3-PDD-Acc node (no master upgrade needed)
     "t2v-pddacc8": Tier(
         key="t2v-pddacc8", route="t2v",
