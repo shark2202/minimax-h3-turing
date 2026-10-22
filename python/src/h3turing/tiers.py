@@ -32,32 +32,28 @@ class Tier:
 
 
 TIERS: dict[str, Tier] = {
+    # t2v-final: LoRA applied at run time (bypass) instead of merged into the
+    # w4a8 weights - 29% faster at equal quality (RUNBOOK 5.13). Verified
+    # same-seed reproducible: two runs, 124/124 identical frames.
     "t2v-final": Tier(
         key="t2v-final", route="t2v",
-        workflow="h3_w4a8_t2v_compat_api.json",
+        workflow="h3_w4a8_t2v_bypass2_api.json",
         lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
-        steps=4, cached=False, reproducible=True, env="0.33.1+",
-        measured_s=232,   # 本机实测 232.46s（2026-10-21），旧值 280s 是上游手册的数
-        notes="Baseline. Use for everything that enters the cut.",
+        steps=4, cached=False, reproducible=True,
+        env="0.33.1+ (needs the Larryvrh Turbo node pack for bypass mode)",
+        measured_s=166,   # 本机实测 165.77s（2026-10-21，bypass）；merge 版是 232.46s
+        notes="The cut tier. Bypass LoRA (166 s) - merging into w4a8 costs 29% for no gain.",
     ),
+    # t2v-draft: bypass LoRA + FirstBlockCache 0.60 - 95 s, the fastest tier that
+    # still looks like the picture (RUNBOOK 5.13).
     "t2v-draft": Tier(
         key="t2v-draft", route="t2v",
-        workflow="h3_w4a8_t2v_t8draft_api.json",
+        workflow="h3_w4a8_t2v_bypass_fbc6_api.json",
         lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
-        steps=4, cached=True, reproducible=False, env="0.33.1+",
-        measured_s=157,   # 本机实测 156.62s（2026-10-21）
+        steps=4, cached=True, reproducible=False,
+        env="0.33.1+ (needs Larryvrh Turbo node + FirstBlockCache node)",
+        measured_s=95,    # 本机实测 95.32s（2026-10-21）
         notes="T8 threshold 1.0. Defaults (0.12) are a negative optimization on 4-step routes.",
-    ),
-    # Fastest usable draft on this box: FirstBlockCache at threshold 0.60.
-    # Measured 2026-10-21: 108 s (-53%), frame gradient 92% of the plain tier,
-    # audio -17.6 dBFS (only 3 dB under the plain tier) - see RUNBOOK 5.11.
-    "t2v-draft-fast": Tier(
-        key="t2v-draft-fast", route="t2v",
-        workflow="h3_w4a8_t2v_firstblockcache6_api.json",
-        lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
-        steps=4, cached=True, reproducible=False, env="0.33.1+ (needs FirstBlockCache node)",
-        measured_s=108,
-        notes="FirstBlockCache threshold 0.60. Fastest draft that keeps picture and audio: 108 s.",
     ),
     # Roughest tier: same node at threshold 1.0. 67 s (-71%) but the frame
     # gradient drops to 65% and the audio to -29.6 dBFS - look-dev only.
@@ -69,23 +65,26 @@ TIERS: dict[str, Tier] = {
         measured_s=67,
         notes="FirstBlockCache threshold 1.0. 67 s - pick composition only, never the cut.",
     ),
+    # i2v-final: bypass LoRA - 182 s vs 212 s merged, first-frame lock intact
+    # (r=0.998, attribution x27.4) - RUNBOOK 5.13.
     "i2v-final": Tier(
         key="i2v-final", route="i2v",
-        workflow="h3_w4a8_i2v_compat_api.json",
+        workflow="h3_w4a8_i2v_bypass_api.json",
         lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
-        steps=4, cached=False, reproducible=True, env="0.33.1+",
-        measured_s=212,
+        steps=4, cached=False, reproducible=True,
+        env="0.33.1+ (needs the Larryvrh Turbo node pack for bypass mode)",
+        measured_s=182,
         notes="First-frame anchored (face lock). Needs your own first-frame image.",
     ),
     # i2v draft: same FirstBlockCache as the t2v draft-fast tier, measured 2026-10-21
     # (110.93 s, -48%); the first-frame lock survives the cache (r=0.998, x26).
     "i2v-draft": Tier(
         key="i2v-draft", route="i2v",
-        workflow="h3_w4a8_i2v_firstblockcache6_api.json",
+        workflow="h3_w4a8_i2v_bypass_fbc6_api.json",
         lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
         steps=4, cached=True, reproducible=False, env="0.33.1+ (needs FirstBlockCache node)",
-        measured_s=111,
-        notes="FirstBlockCache 0.60 on the i2v route: 111 s, first-frame lock intact.",
+        measured_s=103,
+        notes="Bypass LoRA + FirstBlockCache 0.60 on the i2v route: 103 s, lock intact.",
     ),
 # PDD 8-step via the ComfyUI-MiniMax-H3-PDD-Acc node (no master upgrade needed)
     "t2v-pddacc8": Tier(
@@ -129,7 +128,8 @@ TIERS: dict[str, Tier] = {
 ALIASES = {
     "draft": "t2v-draft",
     "final": "t2v-final",
-    "fastest": "t2v-draft-fast",   # 2026-10-21: i2v-ultra needs the master env, t2v-draft-fast does not
+    "fastest": "t2v-draft",        # 95 s - the fastest tier that still looks like the picture
+    "roughest": "t2v-draft-rough",  # 67 s - composition only
     "i2v-fastest": "i2v-ultra",
 }
 
