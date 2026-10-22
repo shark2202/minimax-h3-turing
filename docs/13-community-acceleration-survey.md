@@ -110,7 +110,7 @@ int8_attention_is_available() -> True
 ## 4. 权重侧：最便宜的 A/B（不碰版本、不装节点）
 
 - **Turbo LoRA 换代**：`larryvrh v4_step600_ema`（v4 线）、ckpt500/850 EMA、lightx2v v1.0。社区做过 **25 配置 × 10 压力场景**系统对拍（持续音高 / 重叠对白 / 口音与语码切换 / 硬切 / 镜面一致性 / 手指 / 节拍网格），并发现 sampler 与 audio shift 是独立变量——**audio shift 6 会让 whisper 热 ~9dB**
-- **FastH3 4 步（DMD2 蒸馏）**：118s vs Turbo 8 步 225s（**1.87×**），30 段 MV 零失败
+- **FastH3 4 步（DMD2 蒸馏）**：118s vs Turbo 8 步 225s（**1.87×**），30 段 MV 零失败 —— ⚠️ **本机实测判死（2026-10-21，`RUNBOOK §5.8`）**：换 LoRA + euler 后 **364.86s（比 turbo-4 慢 57%）**、音轨近静音（RMS −53.9 dBFS）、画面扁平。根因指向 **该 LoRA 是相对 bf16 pruned 底模提取的 adaln 差分，作用在本机 pruned w4a8 底模上会改变 sigma 条件**（与 `docs/09` 的量化+LoRA 教训同源）→ **社区的 bf16 结论不能照抄到 w4a8 底模**
 - **TaoMate-H3 3 步**：**2.2×** vs Turbo 8 步；1.2× vs 4 步 LoRA
 - **HyperFlow 8 步**（Video Rebirth，drbaph 打包 4 个）
 - `H3-Anti-Burn-LoRA`：链式续接抗烧焦（非提速）

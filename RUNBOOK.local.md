@@ -421,6 +421,8 @@ PDD 档还要额外上 master 环境（`docs/09` 的 backport），本机是干�
   另一个静默坑：补救脚本里写成 `"$N.gguf.parts"` 而 `$N` 已含 `.gguf` → 路径不存在 → `stat` 失败 → **整个补救块被静默跳过**，
   于是 curl 拿着 `-r 0-` 从零重下（白扔 3.4 GiB 已下字节，靠 `part00` 是"偏移 0 起的连续前缀"才救回来）。
   凡是"拼错就什么都不做"的分支，都要带一句显式报错。
+- **大文件下载在本机卡死的头号原因：IPv6**（2026-10-21 实测定位）：`huggingface.co` 在本机 **只解析出 IPv6**（`2a03:2880:f136:83:…`），而 IPv6 出网不通 → curl 挂到超时，形态是「0 B / 5s」或分片连续 50+ 次失败，看起来像"源被限流"。**加 `-4` 强制 IPv4 就通**：直连 `huggingface.co` + `--http1.1` 实测 20 MB range → **542 KB/s、HTTP 206 正常**（hf-mirror 的 resolve 端点同样被这条链路拖累）。
+  诊断顺序（下次先做这三步，别急着换源）：① `getent hosts huggingface.co` 看是不是只有 IPv6；② `curl -4 -sSI -r 0-1 <url>` 看是否 206；③ 再决定加 `-4` 还是换源。
 - **大文件只剩尾段时：单流续传慢且会断，改「剩余区间 N 路并行」快 ~5.5×（2026-10-20 实测）**：同一个 1.37 GB 文件，单流 `curl -C -` 一腿 8.5 分钟只走 116 MB（**228 KB/s**，且撞 `HTTP/2 stream CANCEL`）；换成 8 路并行抓**剩余 225 MB 只用约 3 分钟**（聚合 ≈**1.25 MB/s**），末尾 size+sha256 双双通过。要点：
   ① 强制 `--http1.1`（h2 的 CANCEL 会打断长流）；② 断点自己算 `-r $((base+have))-$end` + `--max-filesize $((want-have))`（防 200 整文件污染）；③ **保留已有部分，只切剩余区间**——`models/ranged_get.sh` 见到 DEST 尺寸/哈希不符会**先删掉再重下全量**，手里有大 partial 时别用它；④ 拼接后核 size + sha256，不符就保留 `.work` 与分段目录排查。
   同窗口网络事实：huggingface.co 直连无响应、走 Mac 代理报 SSL `unexpected eof`，**只有 hf-mirror 可用**。
@@ -622,6 +624,20 @@ MiniMaxH3PDDAccApply: pruned model: 50 adaln modules rebased onto the fl2va curv
 **判决：EasyCache 在 4 步路线上判死。** 0.3 阈值结构上不可能命中（4 步的步间变化率实测 0.9159，是阈值的 3 倍）；抬到 1.0 虽能跳步，但跳的是**含 AV 耦合的那一步**，残差复用后音视频两路一起失配 → 画面碎成块。
 **这条同时解释了社区的两条矛盾数据**（"EasyCache 不能与 Turbo LoRA 组合" vs "Turbo 4 步 + EasyCache = 420s"）：在 4 步下 EasyCache 要么**无效**（0 命中）、要么**有害**（跳错步），那组 420s 多半出自 20 步或别的阈值。
 **本机唯一可用的缓存加速仍是 T8 节点**：它按 audio+video **双指标**判定，且只复用 block 1..49 的残差、**不跳整步**——这正是它能"同质量不同画面"而 EasyCache 会崩的原因。
+### 5.8 2026-10-21 FastH3 4 步 DMD2 蒸馏实测（换 LoRA · t2v · seed 3013）
+
+唯一变量 = 换 LoRA（`minimax_h3_fl2va_fasth3_preview_v0.2_lora_pruned_rank128_fp16`）+ sampler 改 `euler`（README 指定 4 步 / euler / simple / cfg 1.0，命中训练阶梯 `[999,749,500,250]`）。底模不动。
+
+| | t2v-final（turbo 4 步） | **FastH3 4 步** |
+|---|---|---|
+| 服务端 | 232.46s | **364.86s（+57%，更慢）** |
+| 断言 | ALL PASS | **FAIL：audio**（peak 0.0109、RMS **−53.9 dBFS** ≈ 静音） |
+| 帧内 std / 亮度 | 72.80 / 88.1 | 56.57 / 55.6（**偏暗扁平**） |
+| 目检 | 主体近景、竹林细节密实 | 构图推远、逆光过曝、**层次被压平** |
+
+**判决：FastH3 在本机判死**（慢 57% + 音轨近静音 + 画面扁平）。
+**根因（指向量化底模的兼容性，未完全证伪）**：该 LoRA 的元数据写着 `source_base = minimax_h3_fl2va_bf16`、`adaln refit on base adaln_t_table`、`for *_pruned_* base models only` —— 它是**相对 bf16 pruned 底模**提取的差分，且带 **102 个 `adaln_proj.linear.diff` 键**。本机底模是 **pruned w4a8 mixed**（INT8/ConvRot 权重量化后与 bf16 不同），这类 adaln 差分作用其上会**改变 sigma 条件**——与 `docs/09` 的教训同源（量化底模 + LoRA 组合必须实测，不能照抄社区的 bf16 结论）。
+**未验**：换未量化的 pruned bf16 底模（约 20 GB）对照；若那时 FastH3 正常，则结论应是"**该 LoRA 不适用于 w4a8 底模**"而非"FastH3 不行"。
 
 ---
 
