@@ -46,6 +46,16 @@ TIERS: dict[str, Tier] = {
         measured_s=160,
         notes="T8 threshold 1.0. Defaults (0.12) are a negative optimization on 4-step routes.",
     ),
+    # Fastest draft measured on this box: T8 block cache + TeaCache step cache stacked
+    # (TeaCache skips one whole forward, T8 hits one of the remaining three).
+    "t2v-draft-fast": Tier(
+        key="t2v-draft-fast", route="t2v",
+        workflow="h3_w4a8_t2v_t8_teacache_api.json",
+        lora="minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_resized_avg_rank_21_bf16.safetensors",
+        steps=4, t8=True, reproducible=False, env="0.33.1+ (needs T8 + TeaCache nodes)",
+        measured_s=153,
+        notes="Fastest draft: 153 s (-34%). Needs the TeaCache node on top of T8; audio stays at T8 level (-37 dBFS) - use the TeaCache-only draft if audio matters.",
+    ),
     "i2v-final": Tier(
         key="i2v-final", route="i2v",
         workflow="h3_w4a8_i2v_compat_api.json",
@@ -104,7 +114,8 @@ TIERS: dict[str, Tier] = {
 ALIASES = {
     "draft": "t2v-draft",
     "final": "t2v-final",
-    "fastest": "i2v-ultra",
+    "fastest": "t2v-draft-fast",   # 2026-10-21: i2v-ultra needs the master env, t2v-draft-fast does not
+    "i2v-fastest": "i2v-ultra",
 }
 
 

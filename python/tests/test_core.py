@@ -17,7 +17,7 @@ from h3turing.tiers import reproducible_only  # noqa: E402
 
 class TestTiers(unittest.TestCase):
     def test_tiers_present(self):
-        self.assertEqual(len(TIERS), 8)  # 出厂六件套 + 2026-10-20 新增的 PDD-Acc 两档（节点路线，免 master）
+        self.assertEqual(len(TIERS), 9)  # 出厂六件套 + PDD-Acc 两档 + 2026-10-21 的 t2v-draft-fast
         self.assertTrue({"t2v-final", "t2v-draft", "i2v-final", "i2v-draft", "t2v-ultra", "i2v-ultra"} <= set(TIERS))
 
     def test_reproducibility_discipline(self):
@@ -30,7 +30,8 @@ class TestTiers(unittest.TestCase):
 
     def test_aliases_resolve(self):
         self.assertIs(get("draft"), TIERS["t2v-draft"])
-        self.assertIs(get("fastest"), TIERS["i2v-ultra"])
+        self.assertIs(get("fastest"), TIERS["t2v-draft-fast"])
+        self.assertIs(get("i2v-fastest"), TIERS["i2v-ultra"])
         self.assertIs(get("final"), TIERS["t2v-final"])
 
     def test_unknown_tier_lists_valid(self):

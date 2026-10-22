@@ -638,6 +638,40 @@ MiniMaxH3PDDAccApply: pruned model: 50 adaln modules rebased onto the fl2va curv
 **判决：FastH3 在本机判死**（慢 57% + 音轨近静音 + 画面扁平）。
 **根因（指向量化底模的兼容性，未完全证伪）**：该 LoRA 的元数据写着 `source_base = minimax_h3_fl2va_bf16`、`adaln refit on base adaln_t_table`、`for *_pruned_* base models only` —— 它是**相对 bf16 pruned 底模**提取的差分，且带 **102 个 `adaln_proj.linear.diff` 键**。本机底模是 **pruned w4a8 mixed**（INT8/ConvRot 权重量化后与 bf16 不同），这类 adaln 差分作用其上会**改变 sigma 条件**——与 `docs/09` 的教训同源（量化底模 + LoRA 组合必须实测，不能照抄社区的 bf16 结论）。
 **未验**：换未量化的 pruned bf16 底模（约 20 GB）对照；若那时 FastH3 正常，则结论应是"**该 LoRA 不适用于 w4a8 底模**"而非"FastH3 不行"。
+### 5.9 2026-10-21 TeaCache 实测（★19 MIT 纯 Python · t2v 4 步 + turbo · seed 3013）
+
+节点 `Icyoung/ComfyUI-MiniMaxH3-TeaCache`：判定量是**输入**的 `rel_l1`、按**累积**增量决定复用（与 EasyCache 看输出变化率不同），用 ComfyUI 官方 `set_model_unet_function_wrapper`，不改 core。
+
+| | t2v-final（turbo 4 步） | **TeaCache**（thresh 0.15 / start 1 / end −1） | T8 草稿档（对照） |
+|---|---|---|---|
+| 服务端 | 232.46s | **191.90s（−17%）** | 156.62s |
+| 断言 | ALL PASS | **ALL PASS** | ALL PASS |
+| 帧内 std | 72.80 | **69.89（96%）** | 50.20 |
+| 梯度能量（高频细节代理） | 7.133 | **6.154（86%）** | 7.803 |
+| 音轨 RMS | −14.6 dBFS | **−16.4 dBFS（仅低 1.8 dB）** | −38.3 dBFS |
+| PSNR vs baseline | 基准 | 15.08 dB | ≈14 dB |
+| 目检 | 主体近景 | **构图/主体/细节均在，同质量不同画面** | 同级 |
+
+**判决：TeaCache 是可用的草稿档加速（质量与 T8 同级），但单独用比 T8 慢（192s vs 157s）；它唯一的优势是音频几乎不损失**（−16.4 vs T8 的 −38.3 dBFS）——T8 草稿档的音轨响度低到需要后期统一增益，TeaCache 不用。
+→ 下一步测**两者叠加**（机理正交：T8 跳 block、T8 之外的整步由 TeaCache 跳），见 §5.10。
+### 5.10 2026-10-21 T8 + TeaCache 叠加实测（草稿档最快纪录）
+
+MODEL 链：`LoRA → T8(阈值 1.0) → TeaCache(0.15, start 1, end −1) → guider/scheduler`。两者机理正交（T8 跳 block 1..49 的残差、TeaCache 跳整步），日志证实**叠加真的生效**：
+`MiniMax H3 Block Cache - cached 2/4 model forwards`（单独 T8）→ 叠加后 **`cached 1/3 model forwards`**（TeaCache 先跳掉 1 整步，剩下 3 次里 T8 命中 1 次）。
+
+| | t2v-final | T8 单独 | TeaCache 单独 | **T8+TeaCache** |
+|---|---|---|---|---|
+| 服务端 | 232.46s | 156.62s | 191.90s | **153.46s（−34%，最快）** |
+| 帧内 std | 72.80 | 50.20 | 69.89 | 51.62 |
+| 梯度能量 | 7.133 | 7.803 | 6.154 | 7.721 |
+| 音轨 RMS | −14.6 dBFS | −38.3 dBFS | **−16.4 dBFS** | −37.1 dBFS |
+| 断言 | ALL PASS | ALL PASS | ALL PASS | ALL PASS |
+
+**判决：叠加只快 2%（153.5 vs 156.6）——因为 TeaCache 跳掉的那一步正好是 T8 会命中的那一步**，两者在这条 4 步路线上**收益重叠**。叠加后音轨仍是 T8 级别（−37.1 dBFS）→ **T8 的音频损失来自它自身的 block 残差复用，TeaCache 救不回来**。
+**草稿档三选一**：
+- 只要快 → **T8+TeaCache 153.5s**
+- 只要保音频 → **TeaCache 单独 191.9s**（音轨只低 1.8 dB，画面 std 96% baseline）
+- 均衡 → T8 单独 156.6s（无额外节点）
 
 ---
 

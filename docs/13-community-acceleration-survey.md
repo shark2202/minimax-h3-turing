@@ -7,8 +7,8 @@
 | # | 路线 | 门槛 | 社区数字 | 本机可用性（v0.33.1 锁版） |
 |---|---|---|---|---|
 | A1 | kitchen **INT8 attention**（`--use-ck-attention`） | 无 | 5090 sampler **≈2×**；4090 1.34–1.79× | ✅ **kernel 已确认可用，从未启用** |
-| A2 | **EasyCache**（ComfyUI 内置） | 无 | 3060 20 步 782.3→428.2s（**-45.3%**） | ✅ 节点已注册，未测 |
-| A3 | TeaCache / FirstBlockCache / AdaptiveCache | 装节点 | 3060 20 步 **1.94× / 1.64× / 1.58×** | 未测（与 T8 同纪律） |
+| A2 | **EasyCache**（ComfyUI 内置） | 无 | 3060 20 步 782.3→428.2s（**-45.3%**） | ✅ 节点已注册，**本机实测判死**：0.3 阈值 0 命中（产物与 baseline 逐帧相同）、1.0 阈值快 41% 但画面崩坏 |
+| A3 | TeaCache / FirstBlockCache / AdaptiveCache | 装节点 | 3060 20 步 **1.94× / 1.64× / 1.58×** | ✅ **TeaCache 已实测**（192s / −17% / 质量与 T8 同级 / 音轨几乎不损）；FirstBlockCache 待测 |
 | B1 | **PDD-Acc 节点** | ComfyUI ≥0.33.0 | 官方 8 步路线，免 core 升级 | ✅ **可解锁 `-ultra`，不需 master** |
 | B2 | Zironic **H3-Optimizations** | ComfyUI ≥0.33.0 | Memory Opt **1.27×**（134→106s） | 可装，代价=改动数值 |
 | B3 | **comfyui-turing-utils** ⭐ | 需自编译 CUDA kernel | 无公开 H3 端到端数字 | ✅ 唯一**点名 sm_75** 的包 |
