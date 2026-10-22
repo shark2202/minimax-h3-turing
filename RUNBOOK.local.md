@@ -709,6 +709,31 @@ MODEL 链：`LoRA → T8(阈值 1.0) → TeaCache(0.15, start 1, end −1) → g
 
 **结论**：① 档位表里 i2v 的 420s / 260s 是**上游手册的数**，在本机是错的（实测 211.65s）——已回填；② **FBC@0.6 同样迁移到 i2v**，且**不会破坏首帧锚定**（缓存只动采样轨迹，不动条件编码）→ i2v 草稿档也应改用 FBC@0.6。
 
+### 5.13 2026-10-21 **LoRA bypass vs merge：成片档免费快 29%**（本会话最大的一笔生产收益）
+
+起因是装 larryvrh Turbo 节点包时的副产物：它的 LoRA 节点默认 **bypass（运行时应用）**，跑出来只要 165.59s，而产线的 `LoraLoaderModelOnly`（= merge，权重合并）要 232.46s。于是做隔离实验。
+
+**第一步：先把键名对上。** 节点期望**无前缀**键名（`blocks.0.attn.out_proj.lora_A.weight`），而本机产线 LoRA 是 ComfyUI-resized 带 `diffusion_model.` 前缀 → 节点日志 `0 bypass adapters`（**LoRA 根本没生效**）。用 safetensors 转一份去前缀的同款副本（416 张量，数据逐字节相同，只改键名）。
+
+**第二步：真隔离**（同一 LoRA、同一 seed 3013、同一提示词，只换应用方式）：
+
+| | merge（产线 `LoraLoaderModelOnly`） | **bypass（运行时应用）** | 裸底模无 LoRA（对照） |
+|---|---|---|---|
+| 服务端 | 232.46s | **165.77s（−29%）** | 158.96s |
+| 帧内 std | 72.80 | **72.74** | 51.14 |
+| 梯度能量 | 7.133（100%） | **7.280（102%）** | 4.288 |
+| 音轨 RMS | −14.6 dBFS | **−14.1 dBFS** | −41.6 dBFS |
+| 断言 | ALL PASS | ALL PASS | ALL PASS |
+| 与 merge 帧差 | 基准 | PSNR 15.94 dB（0/124 相同，**同质量不同画面**） | — |
+
+**机理**：把 LoRA merge 进 **pruned w4a8** 权重后，模型不再走纯 int8 快速路径（每步要为混合/反量化路径买单）；bypass 保持 int8 权重不动、运行时在 fp16 激活上叠加 `up(down(x))·scale`——**又快 29%，质量还略升**（梯度 102%、音轨持平）。
+**顺带钉死一条选 LoRA 的规矩**：本机底模上**只有不改 adaln / time-conditioning 的 LoRA 可用**——
+- ✅ `lightx2v turbo v0.1`（416 张量，adaln **0**）→ 产线在用，bypass / merge 都正常
+- ✅ `turbo v1.0_768p`（624 张量，adaln **0**）
+- ❌ `FastH3`（102 个 adaln `.diff`）→ 慢 57% + 音轨近静音（§5.8）
+- ❌ `larryvrh turbo ckpt500`（102 对 adaln `lora_A/B`）→ 即使用了它自带节点在运行时重注入 51 个 adaln（本机日志：`pruned base [bypass]: … 1 injections + 51 adaln injected at run time`），**音轨仍死**（−35.5 dBFS）→ 剪枝 w4a8 的 adaln 曲线与 LoRA 训练时的曲线不同源
+→ **社区的 LoRA 结论不能照抄到 w4a8 底模；含 adaln 的 LoRA 一律先在本机实测**。
+
 ---
 
 ## 6. 尚未固化 / 待办
