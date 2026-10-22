@@ -764,6 +764,27 @@ i2v 侧同样：merge 211.65s → **bypass 182.09s**（梯度 108%、音轨 −2
 
 **真·RTX VSR 装不上**：`nvidia-vfx` 只有源码包（0.2.0.0），本机 `pip install` 停在 "Getting requirements to build wheel"，需要 CUDA/TensorRT 工具链 → 未装上，手册里"47ms/帧 VSR"这条**在本机不成立**（社区那条来自别的环境）。静态 ffmpeg 也没有 CUDA/NPP 滤镜与 nvenc 编码器。
 
+### 5.15 2026-10-21 `comfyui-turing-utils` 尝试：**双重阻塞，本机做不了**（唯一点名 sm_75 的加速包）
+
+它是社区里唯一提供 **sm_75 原生** W8A8 attention / exact-sm75 Sage / native sm75 Sol 稀疏注意力 / SLA / Spark 的包，理论上能翻 `docs/03`「SageAttention 判死」的判决（我们判死的是 pip wheel + Triton 路线，它走原生 cubin）。本机实测尝试结果：
+
+**阻塞一：节点本身要求比 v0.33.1 更新的 ComfyUI**
+```
+[WARNING] Cannot import .../comfyui-turing-utils module for custom nodes: No module named 'comfy.storage'
+```
+→ 与 §1 的**版本锁**直接冲突（要升 core）。
+
+**阻塞二：CUDA kernel 编译不出来**（`pip install -v --no-build-isolation --no-deps -e ./kernel`，sm_75 only、CUDA 13.4、MAX_JOBS=4）
+```
+fatal error: Python.h: 没有那个文件或目录        ← 本机没有 python3.10-dev（同 §4.1 那条）
+error: #error C++20 or later compatible compiler is required to use ATen
+```
+→ 修法需要 **sudo**（`sudo apt install python3.10-dev`），本机 sudo 需要密码，agent 侧无法自动完成；gcc 11.4 本身支持 C++20，那条报错是缺 Python.h 的连带。
+
+**处置**：已把克隆目录删掉（留着只会在每次启动日志里刷一条 IMPORT FAILED），**产线不受影响**（删除后重启：7 个节点全部 0.0s 加载、864 节点、零 IMPORT FAILED）。
+**若要继续**：① 先在**另一个 ComfyUI 实例**（别动锁定的 v0.33.1）上试；② 需要 sudo 装 `python3.10-dev`；③ 装好后重新编译 kernel，再用 `Configure Attention Strategy` 选 `w8a8` 做同 seed 对拍（重点看**画质**——kitchen INT8 attention 在本机是"提速 1.31× 但画面软化"，原生 sm75 内核是否不同必须实测）。
+**本轮 pip 卫生**：`pip freeze` 编译前后**逐行无变化**（只多了未完成的 editable 链接，失败后已清理），量化/LoRA 路径未受影响（§4.5/§4.7 的纪律）。
+
 ---
 
 ## 6. 尚未固化 / 待办
