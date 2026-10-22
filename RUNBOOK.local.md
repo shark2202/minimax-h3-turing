@@ -26,6 +26,9 @@ scripts/h3turing.local.sh demo --image h3_demo_output/i2v_first_frame.png --prom
 # ③c 产物断言（i2v 专属：首帧真的被用了吗？无 GPU，秒级）
 /home/a/ai-work/ComfyUI/.venv/bin/python scripts/check_video.py h3_demo_output/H3Lite_00009_.mp4 --first-frame h3_demo_output/i2v_first_frame.png --control /home/a/ai-work/ComfyUI/input/example.png
 
+
+# ③d 交付 1080p（640×352 → 1920×1056，音轨逐样本不变；独立 venv，不碰 ComfyUI 的环境）
+/home/a/ai-work/.venv/bin/python scripts/upscale_video.py h3_ab/bypass2/H3BYPASS2_00001_.mp4 out_1080p.mp4 --scale 3
 # ④ 停止服务
 pkill -f "main.py --listen"
 ```
@@ -746,6 +749,20 @@ MODEL 链：`LoRA → T8(阈值 1.0) → TeaCache(0.15, start 1, end −1) → g
 
 i2v 侧同样：merge 211.65s → **bypass 182.09s**（梯度 108%、音轨 −22.5 dBFS、首帧锚定 r=0.998 / ×27.4）；再叠 FBC@0.6 → **103.18s**（梯度 97%、锚定 r=0.998 / ×26.1）。
 **结论：本会话把两条产线路径的耗时都砍掉约 29%–48%，画质不降反微升。**
+
+### 5.14 2026-10-21 交付链补齐：640×352 → 1920×1056（手册一直缺的那个脚本）
+
+手册从 2026-09 起就写着"640×352 生成 → 抽帧 → RTX VSR 超分 1080p（47ms/帧）"，但**脚本一直不存在**。本轮补上 `scripts/upscale_video.py`。
+
+**实现选择**：不手写 PyAV 的抽帧/合回（PyAV 不自动交织 A/V；强行按序 mux 会撞 `Cannot rebase to zero time` / `returned 22`），改为**一条 ffmpeg 命令**（解码→缩放→编码→`-c:a copy`）。ffmpeg 用 `imageio-ffmpeg` 附带的**静态构建 7.0.2**，装在**独立 venv** `/home/a/ai-work/.venv`——**绝不装进 ComfyUI 的 venv**（`docs/09` 记的 pip 污染量化/LoRA 路径的坑）。
+
+实测（成片档产物）：
+- 640×352 @24fps → **1920×1056 @24fps**，124 帧，时长 5.17s 不变
+- 音轨 **32kHz 立体声逐样本 copy**（331,776 samples，peak 0.871 与源一致）
+- 目检：竹叶、刀鞘、衣纹都保住，**可交付**（是重采样不是 ML 超分，边缘不如原生 1080p 锐利）
+- 算法可选 `lanczos`（默认）/ `hqx`（更锐、可能起振铃）/ `zscale`；`--sharpen 0.4~0.8` 可补回一点锐度
+
+**真·RTX VSR 装不上**：`nvidia-vfx` 只有源码包（0.2.0.0），本机 `pip install` 停在 "Getting requirements to build wheel"，需要 CUDA/TensorRT 工具链 → 未装上，手册里"47ms/帧 VSR"这条**在本机不成立**（社区那条来自别的环境）。静态 ffmpeg 也没有 CUDA/NPP 滤镜与 nvenc 编码器。
 
 ---
 
