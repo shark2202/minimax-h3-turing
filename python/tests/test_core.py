@@ -17,13 +17,13 @@ from h3turing.tiers import reproducible_only  # noqa: E402
 
 class TestTiers(unittest.TestCase):
     def test_tiers_present(self):
-        self.assertEqual(len(TIERS), 9)  # 出厂六件套 + PDD-Acc 两档 + 2026-10-21 的 t2v-draft-fast
+        self.assertEqual(len(TIERS), 10)  # 出厂六件套 + PDD-Acc 两档 + 三个缓存草稿档
         self.assertTrue({"t2v-final", "t2v-draft", "i2v-final", "i2v-draft", "t2v-ultra", "i2v-ultra"} <= set(TIERS))
 
     def test_reproducibility_discipline(self):
         """The core rule: T8 tiers are drafts (not reproducible), plain tiers are finals."""
         for key, tier in TIERS.items():
-            if tier.t8:
+            if tier.cached:
                 self.assertFalse(tier.reproducible, f"{key}: T8 tiers must not be reproducible")
             else:
                 self.assertTrue(tier.reproducible, f"{key}: plain tiers must be reproducible")
@@ -59,16 +59,37 @@ class TestWorkflows(unittest.TestCase):
             for b in banned:
                 self.assertNotIn(b, raw, f"{tier.workflow} leaks {b!r}")
 
-    def test_draft_workflows_carry_explicit_t8(self):
-        """v3-API discipline: draft JSONs must pass ALL 8 T8 inputs explicitly."""
+    def test_draft_workflows_carry_explicit_cache_inputs(self):
+        """v3-API discipline: cached-tier JSONs must pass ALL cache-node inputs explicitly.
+
+        Covers every cache family in use (T8 block cache, TeaCache step cache,
+        FirstBlockCache) - a missing input means HTTP 400 over /prompt, not a
+        silent default.
+        """
+        t8_inputs = {"model", "residual_diff_threshold", "start_percent", "end_percent",
+                     "max_consecutive_hits", "cache_device", "metric_stride", "verbose"}
+        teacache_inputs = {"model", "rel_l1_thresh", "start_step", "end_step", "total_steps"}
+        fbc_inputs = {"model", "mode", "threshold", "start_percent", "end_percent",
+                      "max_consecutive_hits", "temporal_guard"}
         for tier in TIERS.values():
-            if not tier.t8:
+            if not tier.cached:
                 continue
             g = load(tier.workflow)
-            t8 = [n for n in g.values() if n.get("class_type") == "MiniMaxH3BlockCacheT8"]
-            self.assertEqual(len(t8), 1, tier.workflow)
-            self.assertEqual(len(t8[0]["inputs"]), 8, tier.workflow)
-            self.assertEqual(t8[0]["inputs"]["residual_diff_threshold"], 1.0, tier.workflow)
+            seen = 0
+            for node in g.values():
+                ct = node.get("class_type")
+                if ct == "MiniMaxH3BlockCacheT8":
+                    seen += 1
+                    self.assertEqual(set(node["inputs"]), t8_inputs, tier.workflow)
+                    self.assertEqual(node["inputs"]["residual_diff_threshold"], 1.0, tier.workflow)
+                elif ct == "MiniMaxH3TeaCache":
+                    seen += 1
+                    self.assertEqual(set(node["inputs"]), teacache_inputs, tier.workflow)
+                elif ct == "ApplyMiniMaxH3FirstBlockCache":
+                    seen += 1
+                    self.assertEqual(set(node["inputs"]), fbc_inputs, tier.workflow)
+                    self.assertIn(node["inputs"]["threshold"], (0.6, 1.0), tier.workflow)
+            self.assertGreaterEqual(seen, 1, f"{tier.workflow}: cached tier with no cache node")
 
     def test_prompt_seed_helpers(self):
         g = set_seed(set_prompt(load("h3_w4a8_t2v_compat_api"), "hello"), 123)

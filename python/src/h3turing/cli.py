@@ -93,11 +93,11 @@ def _cmd_demo(args) -> int:
 
 def _cmd_tiers(_args) -> int:
     from .tiers import TIERS
-    print(f"{'key':<12} {'route':<5} {'T8':<3} {'repro':<5} {'measured':>9}  env")
+    print(f"{'key':<15} {'route':<5} {'cache':<5} {'repro':<5} {'measured':>9}  env")
     for key, t in sorted(TIERS.items()):
-        print(f"{key:<12} {t.route:<5} {'yes' if t.t8 else 'no':<3} "
+        print(f"{key:<15} {t.route:<5} {'yes' if t.cached else 'no':<5} "
               f"{'yes' if t.reproducible else 'NO':<5} {t.measured_s:>7}s  {t.env}")
-    print("\ndraft tiers (T8) are NOT same-seed reproducible - finals only from plain tiers")
+    print("\ncached tiers (T8 / TeaCache / FirstBlockCache) are NOT same-seed reproducible - finals only from plain tiers")
     return 0
 
 
