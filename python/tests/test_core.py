@@ -60,6 +60,14 @@ class TestWorkflows(unittest.TestCase):
             for b in banned:
                 self.assertNotIn(b, raw, f"{tier.workflow} leaks {b!r}")
 
+    def test_final_tiers_use_the_bypass_lora_path(self):
+        """Merging the LoRA into w4a8 costs 29% for no gain, and the regression is
+        silent (same picture, slower). Tiers that use a merge-path LoRA must also
+        use the runtime bypass node with low_vram=False."""
+        from h3turing.doctor import check_bypass_path
+        c = check_bypass_path()
+        self.assertTrue(c.ok, c.detail)
+
     def test_draft_workflows_carry_explicit_cache_inputs(self):
         """v3-API discipline: cached-tier JSONs must pass ALL cache-node inputs explicitly.
 

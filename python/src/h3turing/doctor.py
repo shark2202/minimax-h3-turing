@@ -88,12 +88,48 @@ def check_lora_env(baseline_errors: int = 0) -> Check:
         "quant+LoRA patch path (docs/09, upstream #16420)",
     )
 
+def check_bypass_path() -> Check:
+    """The final tiers must apply the LoRA at run time (bypass), not merged.
+
+    Merging a LoRA into the pruned w4a8 weights costs 29% wall clock for no
+    quality gain (handbook 5.13) - and the failure is silent: the picture
+    looks the same, it is just slower. The bypass node flips to merge mode
+    when ``low_vram`` is True, so check the tier workflows themselves.
+    """
+    from .tiers import TIERS
+    from .workflows import load
+
+    problems = []
+    for key, tier in TIERS.items():
+        if tier.cached:
+            continue                      # draft tiers: cache dominates, merge is fine
+        try:
+            graph = load(tier.workflow)
+        except Exception as e:
+            problems.append(f"{key}: {e}")
+            continue
+        merge_nodes = [n for n in graph.values()
+                       if isinstance(n, dict) and n.get("class_type") == "LoraLoaderModelOnly"]
+        if not merge_nodes:
+            continue          # no merge-path LoRA (e.g. the PDD-Acc node applies its own)
+        lora_nodes = [n for n in graph.values()
+                      if isinstance(n, dict) and n.get("class_type") == "MiniMaxH3TurboLoRA"]
+        if not lora_nodes:
+            problems.append(f"{key}: merge-path LoRA with no bypass node (+29% time)")
+        elif any(n["inputs"].get("low_vram") for n in lora_nodes):
+            problems.append(f"{key}: low_vram=True means merge mode, +29% time")
+    if problems:
+        return Check("bypass_path", False, "; ".join(problems))
+    return Check("bypass_path", True, "final tiers apply the LoRA at run time")
+
+
 
 def run_all(base: str = "http://127.0.0.1:8188", models_dir: str | Path | None = None) -> list[Check]:
     results = [check_comfyui(base)]
     if results[0].ok:
         results.append(check_queue_clean(base))
         results.append(check_t8_node(base))
+        results.append(check_bypass_path())
     if models_dir:
         results.extend(check_weights(models_dir))
     results.append(check_lora_env())
