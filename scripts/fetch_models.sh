@@ -180,6 +180,29 @@ while IFS='|' read -r sha bytes dest url alt role; do
     fi
     if [ -n "$ONLY" ] && ! printf '%s' "$dest $role" | grep -qi -- "$ONLY"; then continue; fi
     matched=$(( matched + 1 ))
+    case "$url" in
+        derived:*)
+            # 派生件：不是下载来的，是从另一个本地文件派生的。
+            # URL 列写的是派生命令本身，取件时照着跑。
+            url="$(printf '%s' "$url" | cut -d: -f2-)"
+            status="$(row_status "$bytes" "$sha" "$dest")"
+            case "$status" in
+                OK|present) ;;
+                *) status="DERIVED"; printf '  需要派生：%s\n' "$url" >&2 ;;
+            esac
+            printf '%-9s %-13s %-11s %s\n' "${sha:0:8}" "$bytes" "$status" "$dest"
+            [ "$MODE" = "list" ] && continue
+            if [ "$MODE" = "check" ]; then
+                case "$status" in OK|present) ;; *) [ "$rc" -eq 0 ] && rc=1 ;; esac
+                continue
+            fi
+            case "$status" in
+                OK) [ "$QUIET" -eq 0 ] && echo "  跳过（已就位 + sha256 通过）" ;;
+                *) [ "$QUIET" -eq 0 ] && echo "  派生件未就位：请运行上面那条派生命令后重跑" ;;
+            esac
+            continue
+            ;;
+    esac
     url="$(rewrite_url "$url")"
     status="$(row_status "$bytes" "$sha" "$dest")"
     printf '%-9s %-13s %-11s %s\n' "${sha:0:8}" "$bytes" "$status" "$dest"
