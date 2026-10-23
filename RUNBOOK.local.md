@@ -762,7 +762,8 @@ i2v 侧同样：merge 211.65s → **bypass 182.09s**（梯度 108%、音轨 −2
 - 目检：竹叶、刀鞘、衣纹都保住，**可交付**（是重采样不是 ML 超分，边缘不如原生 1080p 锐利）
 - 算法可选 `lanczos`（默认）/ `hqx`（更锐、可能起振铃）/ `zscale`；`--sharpen 0.4~0.8` 可补回一点锐度
 
-**真·RTX VSR 装不上**：`nvidia-vfx` 只有源码包（0.2.0.0），本机 `pip install` 停在 "Getting requirements to build wheel"，需要 CUDA/TensorRT 工具链 → 未装上，手册里"47ms/帧 VSR"这条**在本机不成立**（社区那条来自别的环境）。静态 ffmpeg 也没有 CUDA/NPP 滤镜与 nvenc 编码器。
+**真·RTX VSR 装不上**：`nvidia-vfx` 只有源码包（0.2.0.0），本机 `pip install` 停在 "Getting requirements to build wheel"，需要 CUDA/TensorRT 工具链 → 未装上（`pip list` 无该包、`import nvidia_vfx` 报 ModuleNotFoundError），手册里"47ms/帧 VSR"这条**在本机不成立**（社区那条来自别的环境）。静态 ffmpeg 也没有 CUDA/NPP 滤镜与 nvenc 编码器。
+**一个流程教训**：这次 `pip install` 被 900s 超时打断在 build-metadata 阶段，但因为命令尾部接了 `| tail -20`，**shell 仍返回 exit 0**——后台任务显示 "completed / exit 0"，实际包根本没装上。**判断 pip 安装是否成功要看 `pip list` / `import`，不要信退出码**（带管道的命令一律如此）。
 
 ### 5.15 2026-10-21 `comfyui-turing-utils` 尝试：**双重阻塞，本机做不了**（唯一点名 sm_75 的加速包）
 
