@@ -218,14 +218,22 @@ TORCH_DISABLE_NATIVE_JIT=1 ComfyUI/.venv/bin/python main.py \
 
 ### 3.1 工作流在哪
 
-已放进 ComfyUI 用户目录，**界面左侧 Workflows 面板直接可见**，无需下载：
+已放进 ComfyUI 用户目录，**界面左侧 Workflows 面板直接可见**，无需下载（2026-10-21 整理过：把 17 个实验/已判死/被支配的工作流挪进 `_experiments/`，面板只留产线集合）：
 
 ```
-ComfyUI/user/default/workflows/h3_w4a8_t2v_compat_api.json   文生视频·成片档（250s）
-ComfyUI/user/default/workflows/h3_w4a8_i2v_compat_api.json   图生视频·成片档（~420s）
-ComfyUI/user/default/workflows/sdxl_juggernaut_t2i_api.json   文生图·SDXL Juggernaut XL v9（本机新增）
-ComfyUI/user/default/workflows/h3_w4a8_t2v_qwenscript_api.json  t2v 成片档 + 本地 Qwen3.8 写剧本节点（§3.6）
+h3_w4a8_t2v_bypass2_api.json          文生视频·成片档      166s  ← 主力
+h3_w4a8_t2v_bypass_fbc6_api.json      文生视频·草稿档       95s  ← 主力
+h3_w4a8_t2v_firstblockcache1_api.json 文生视频·极限草稿     67s  （只选构图）
+h3_w4a8_i2v_bypass_api.json           图生视频·成片档      182s  ← 主力
+h3_w4a8_i2v_bypass_fbc6_api.json      图生视频·草稿档      103s  ← 主力
+h3_w4a8_t2v_qwenscript_api.json       t2v 成片档 + 本地 Qwen3.8 写剧本（§3.6）
+h3_w4a8_t2v_pddacc4_api.json          PDD-Acc 4 步（可用但不进产线，§5.6）
+h3_w4a8_t2v_pddacc8_api.json          PDD-Acc 8 步（同上）
+sdxl_juggernaut_t2i_api.json          文生图·SDXL Juggernaut XL v9
+demo.json                              ComfyUI 自带示例（非本项目）
 ```
+
+`_experiments/` 里是本会话的**全部实验工作流**（含已判死的 EasyCache / larryvrh / FBC@0.3，以及被支配的 TeaCache / T8×TeaCache / 旧的 merge 版）——需要复现或回看时把文件拖回上一级即可，别在产线上用。
 
 前端识别 API 格式 JSON 并自动铺成节点图（`isApiJson` / `loadApiJson`）。也可自己导入：
 
