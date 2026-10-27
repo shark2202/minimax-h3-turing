@@ -31,7 +31,7 @@ import time
 import uuid
 from pathlib import Path
 
-WORKFLOWS_DIR = Path(__file__).resolve().parent.parent / "workflows"
+WORKFLOWS_DIR = Path(__file__).resolve().parent.parent / "workflows" / "api"
 T2V_WORKFLOW = "h3_w4a8_t2v_compat_api.json"
 I2V_WORKFLOW = "h3_w4a8_i2v_compat_api.json"
 

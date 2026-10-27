@@ -18,7 +18,7 @@
 
 ![t2v final](preview/t2v_final.jpg)
 
-**文件**：[h3_w4a8_t2v_compat_api.json](h3_w4a8_t2v_compat_api.json) · **实测 280 s/镜**
+**文件**：[h3_w4a8_t2v_compat_api.json](api/h3_w4a8_t2v_compat_api.json) · **实测 280 s/镜**
 
 无 T8，同 seed **可复现**——失败镜头可原样重提、审片结果可重现。**一切要进正片的镜头用它。**
 
@@ -26,7 +26,7 @@
 
 ![t2v draft](preview/t2v_draft.jpg)
 
-**文件**：[h3_w4a8_t2v_t8draft_api.json](h3_w4a8_t2v_t8draft_api.json) · **实测 160 s/镜**
+**文件**：[h3_w4a8_t2v_t8draft_api.json](api/h3_w4a8_t2v_t8draft_api.json) · **实测 160 s/镜**
 
 T8 BlockCache 阈值 1.0，快 43%。**同 seed 不可复现**（缓存命中改变采样轨迹）→ 只用于试 prompt / 选镜头方向，选中的是"方向"不是成片。依据见 [docs/08](../docs/08-t8-blockcache-4step.md)。
 
@@ -36,7 +36,7 @@ T8 BlockCache 阈值 1.0，快 43%。**同 seed 不可复现**（缓存命中改
 
 ![i2v](preview/i2v.jpg)
 
-**文件**：[h3_w4a8_i2v_compat_api.json](h3_w4a8_i2v_compat_api.json) · **实测 420 s/镜（热跑）**
+**文件**：[h3_w4a8_i2v_compat_api.json](api/h3_w4a8_i2v_compat_api.json) · **实测 420 s/镜（热跑）**
 
 需要一个首帧图（角色标准帧/已验收镜头抽帧），`Picture 1 is fully referenced` 锚定——脸一致率显著高于纯文生视频。同 seed 可复现。仓库用默认首帧占位，导入后换成你自己的图。
 
@@ -44,7 +44,7 @@ T8 BlockCache 阈值 1.0，快 43%。**同 seed 不可复现**（缓存命中改
 
 ![i2v draft](preview/i2v_draft.jpg)
 
-**文件**：[h3_w4a8_i2v_t8draft_api.json](h3_w4a8_i2v_t8draft_api.json) · **实测 260 s/镜**
+**文件**：[h3_w4a8_i2v_t8draft_api.json](api/h3_w4a8_i2v_t8draft_api.json) · **实测 260 s/镜**
 
 锁脸镜头的草稿预览：快 38%，**绝对省 160s/镜比 t2v 草稿档（省 120s）更多**——镜头越贵 T8 省得越多。用法与铁律同 t2v 草稿档：只看方向，成片用成片档重跑。
 
@@ -52,7 +52,7 @@ T8 BlockCache 阈值 1.0，快 43%。**同 seed 不可复现**（缓存命中改
 
 ![pdd8 t8](preview/pdd8_t8.jpg)
 
-**文件**：[h3_w4a8_t2v_pdd8_t8_api.json](h3_w4a8_t2v_pdd8_t8_api.json) · **实测 210 s/镜（-34% vs Turbo，命中 6/8）**
+**文件**：[h3_w4a8_t2v_pdd8_t8_api.json](api/h3_w4a8_t2v_pdd8_t8_api.json) · **实测 210 s/镜（-34% vs Turbo，命中 6/8）**
 
 PDD 官方蒸馏 LoRA（8 步）+ T8 缓存的组合拳：**目前最快档，同时画质最高**（8 步蒸馏 > 4 步社区 Turbo 的官方对比结论）。前置要求比前四件多两样：① ComfyUI **master 环境**（backport 方法见 [docs/09](../docs/09-pdd-backport.md)，或等 v0.34.1+）② PDD 权重（`Kijai/MiniMax-H3-experimental` 仓 loras/ 下载）③ T8 节点包 ≥ v1.0.4（原生兼容 master，无需手动补丁）。同 seed 不可复现（草稿专用）；要 PDD 画质的可复现成片，去掉 T8 节点跑纯 8 步（600s）。
 
@@ -60,13 +60,13 @@ PDD 官方蒸馏 LoRA（8 步）+ T8 缓存的组合拳：**目前最快档，�
 
 ![i2v pdd8 t8](preview/i2v_pdd8_t8.jpg)
 
-**文件**：[h3_w4a8_i2v_pdd8_t8_api.json](h3_w4a8_i2v_pdd8_t8_api.json) · **实测 192 s/镜（-51%，命中 6/8）**
+**文件**：[h3_w4a8_i2v_pdd8_t8_api.json](api/h3_w4a8_i2v_pdd8_t8_api.json) · **实测 192 s/镜（-51%，命中 6/8）**
 
 锁脸镜头的终极草稿档：全项目最快纪录。前置与第 5 节相同（master 环境 + PDD 权重 + T8 补丁），LoRA 换 Ref2VA 版。同 seed 不可复现；要可复现的 Ref2VA 成片，去掉 T8 跑纯 8 步（933s）。
 
 ## 7. 文生视频 · 本地 Qwen3.8 写剧本节点
 
-**文件**：[h3_w4a8_t2v_qwenscript_api.json](h3_w4a8_t2v_qwenscript_api.json) · **实测 280 s/镜 + 剧本 ≈15 s**
+**文件**：[h3_w4a8_t2v_qwenscript_api.json](api/h3_w4a8_t2v_qwenscript_api.json) · **实测 280 s/镜 + 剧本 ≈15 s**
 
 不是新档位，是 t2v 成片档 + 一个自定义节点（`ComfyUI-QwenScript`）：`[6] prompt` 由字面量改成接节点的
 `prompt` 输出，于是**"写剧本 → 出片"在同一次排队里跑完**。节点让本机的小参数 Qwen3.8-9B（去审查版）

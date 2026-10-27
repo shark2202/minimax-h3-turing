@@ -7,6 +7,7 @@ batch dies hours later.
 from __future__ import annotations
 
 import json
+import subprocess
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +74,46 @@ def check_weights(models_dir: str | Path) -> list[Check]:
                                 "found" if hit else f"not found under {folder}"))
     return checks
 
+def parse_gpu_procs(csv_text: str) -> list[tuple[int, str, int]]:
+    """解析 `nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv` 的输出。"""
+    out: list[tuple[int, str, int]] = []
+    for line in csv_text.splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 3 or not parts[0].isdigit():
+            continue
+        mib = parts[2].split()[0] if parts[2] else "0"
+        try:
+            out.append((int(parts[0]), parts[1], int(mib)))
+        except ValueError:
+            continue
+    return out
+
+
+def check_gpu_quiet(server_pid: int | None = None) -> Check:
+    """除了 ComfyUI 自己，没有别的进程占着显存。
+
+    这条对应手册 §4.5 那次真事故：**渲染期间有并发负载（分片下载 / 编译 / 另一个
+    模型进程）会让采样出 NaN，成片全黑、音频 NaN、SaveVideo 抛 `returned 22`**——
+    3/3 复现，而且 4 分钟 GPU 时间全白烧。事前唯一的判据就是"设备上还有谁"。
+    """
+    try:
+        q = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name,used_memory", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=10)
+        procs = parse_gpu_procs(q.stdout)
+    except Exception as e:
+        return Check("gpu_quiet", True, f"nvidia-smi 不可用（{e}）")
+    if not procs:
+        return Check("gpu_quiet", True, "no process holds the GPU")
+    others = [p for p in procs if not (server_pid and p[0] == server_pid)]
+    if others:
+        detail = "; ".join(f"pid{pid} {name} {mib}MiB" for pid, name, mib in others)
+        return Check("gpu_quiet", False,
+                     f"other processes hold the GPU: {detail} — 渲染期间并发负载会让采样出 NaN（§4.5）")
+    total = sum(m for _, _, m in procs)
+    return Check("gpu_quiet", True, f"only ComfyUI holds the GPU ({total} MiB)")
+
+
 
 def check_lora_env(baseline_errors: int = 0) -> Check:
     """Heuristic for the Sep-20 quant+LoRA contamination: after installing any pip
@@ -124,12 +165,23 @@ def check_bypass_path() -> Check:
 
 
 
+def _server_pid() -> int | None:
+    """ComfyUI 服务自己的 pid（用来把它从"占显存的进程"里排除）。"""
+    try:
+        out = subprocess.run(["pgrep", "-f", "main.py --listen"], capture_output=True,
+                             text=True, timeout=10).stdout.split()
+        return int(out[0]) if out else None
+    except Exception:
+        return None
+
+
 def run_all(base: str = "http://127.0.0.1:8188", models_dir: str | Path | None = None) -> list[Check]:
     results = [check_comfyui(base)]
     if results[0].ok:
         results.append(check_queue_clean(base))
         results.append(check_t8_node(base))
         results.append(check_bypass_path())
+        results.append(check_gpu_quiet(_server_pid()))
     if models_dir:
         results.extend(check_weights(models_dir))
     results.append(check_lora_env())

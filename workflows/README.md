@@ -18,7 +18,7 @@ All verified on a 2080Ti 22G + ComfyUI + W4A8 mixed weights (same-night, same-se
 
 ![t2v final](preview/t2v_final.jpg)
 
-**File**: [h3_w4a8_t2v_compat_api.json](h3_w4a8_t2v_compat_api.json) · **280 s/clip**
+**File**: [h3_w4a8_t2v_compat_api.json](api/h3_w4a8_t2v_compat_api.json) · **280 s/clip**
 
 No T8 — same-seed **reproducible**: failed shots can be re-submitted identically and review results hold. **Use this for everything that enters the cut.**
 
@@ -26,7 +26,7 @@ No T8 — same-seed **reproducible**: failed shots can be re-submitted identical
 
 ![t2v draft](preview/t2v_draft.jpg)
 
-**File**: [h3_w4a8_t2v_t8draft_api.json](h3_w4a8_t2v_t8draft_api.json) · **160 s/clip**
+**File**: [h3_w4a8_t2v_t8draft_api.json](api/h3_w4a8_t2v_t8draft_api.json) · **160 s/clip**
 
 T8 BlockCache at threshold 1.0, 43% faster. **Not same-seed reproducible** (cache hits fork the sampling trajectory) → for prompt iteration and shot selection only; what you pick is a "direction", not the final. Full analysis: [docs/08](../docs/en/08-t8-blockcache-4step.md).
 
@@ -36,7 +36,7 @@ T8 BlockCache at threshold 1.0, 43% faster. **Not same-seed reproducible** (cach
 
 ![i2v](preview/i2v.jpg)
 
-**File**: [h3_w4a8_i2v_compat_api.json](h3_w4a8_i2v_compat_api.json) · **420 s/clip (warm)**
+**File**: [h3_w4a8_i2v_compat_api.json](api/h3_w4a8_i2v_compat_api.json) · **420 s/clip (warm)**
 
 Needs a first frame (a character reference frame or a frame extracted from an approved shot) — face consistency is markedly better than pure t2v. Same-seed reproducible. The repo ships a placeholder; point it at your own image.
 
@@ -44,7 +44,7 @@ Needs a first frame (a character reference frame or a frame extracted from an ap
 
 ![i2v draft](preview/i2v_draft.jpg)
 
-**File**: [h3_w4a8_i2v_t8draft_api.json](h3_w4a8_i2v_t8draft_api.json) · **260 s/clip**
+**File**: [h3_w4a8_i2v_t8draft_api.json](api/h3_w4a8_i2v_t8draft_api.json) · **260 s/clip**
 
 Drafts for face-locked shots: 38% faster, and the **absolute saving (160 s/clip) beats the t2v draft tier's 120 s** — the pricier the shot, the more T8 saves. Same rules as the t2v draft tier: directions only; re-render finals on the final tier.
 
@@ -52,7 +52,7 @@ Drafts for face-locked shots: 38% faster, and the **absolute saving (160 s/clip)
 
 ![pdd8 t8](preview/pdd8_t8.jpg)
 
-**File**: [h3_w4a8_t2v_pdd8_t8_api.json](h3_w4a8_t2v_pdd8_t8_api.json) · **210 s/clip (−34% vs Turbo, 6/8 hits)**
+**File**: [h3_w4a8_t2v_pdd8_t8_api.json](api/h3_w4a8_t2v_pdd8_t8_api.json) · **210 s/clip (−34% vs Turbo, 6/8 hits)**
 
 The official PDD distilled LoRA (8-step) combined with the T8 cache: **currently the fastest tier and the highest quality** (the official 8-step distillation beats the community 4-step Turbo in blind comparison pending; official materials already show parity-or-better). Extra prerequisites: ① a ComfyUI **master environment** (backport recipe in [docs/09](../docs/en/09-pdd-backport.md), or wait for v0.34.1+) ② the PDD weights (download from the `Kijai/MiniMax-H3-experimental` repo, `loras/`) ③ T8 node pack >= v1.0.4 (master-compatible out of the box; older packs need the patch in docs/09). Not same-seed reproducible (drafts only); for reproducible PDD-quality finals, drop the T8 node and run pure 8-step (600 s).
 
@@ -60,13 +60,13 @@ The official PDD distilled LoRA (8-step) combined with the T8 cache: **currently
 
 ![i2v pdd8 t8](preview/i2v_pdd8_t8.jpg)
 
-**File**: [h3_w4a8_i2v_pdd8_t8_api.json](h3_w4a8_i2v_pdd8_t8_api.json) · **192 s/clip (−51%, 6/8 hits)**
+**File**: [h3_w4a8_i2v_pdd8_t8_api.json](api/h3_w4a8_i2v_pdd8_t8_api.json) · **192 s/clip (−51%, 6/8 hits)**
 
 The ultimate draft tier for face-locked shots — the fastest record in this project. Same prerequisites as section 5 (master environment + PDD weights + the T8 patch), with the Ref2VA LoRA. Not same-seed reproducible; for reproducible Ref2VA finals drop the T8 node and run pure 8-step (933 s).
 
 ## 7. t2v · Local Qwen3.8 Screenplay Node
 
-**File**: [h3_w4a8_t2v_qwenscript_api.json](h3_w4a8_t2v_qwenscript_api.json) · **280 s/clip + ≈15 s for the script**
+**File**: [h3_w4a8_t2v_qwenscript_api.json](api/h3_w4a8_t2v_qwenscript_api.json) · **280 s/clip + ≈15 s for the script**
 
 Not a new tier: the t2v final tier plus one custom node (`ComfyUI-QwenScript`). `[6] prompt` is a link to the
 node's `prompt` output instead of a literal, so **"write the 剧本 → render" happens in one queue run**. The node

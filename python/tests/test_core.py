@@ -60,6 +60,15 @@ class TestWorkflows(unittest.TestCase):
             for b in banned:
                 self.assertNotIn(b, raw, f"{tier.workflow} leaks {b!r}")
 
+    def test_parse_gpu_procs(self):
+        """doctor 的 gpu_quiet 检查靠它解析 nvidia-smi 输出（§4.5 的并发事故防线）。"""
+        from h3turing.doctor import parse_gpu_procs
+        csv = ("1234, /usr/bin/python, 17458 MiB\n"
+               "5678, llama-server, 6808 MiB\n"
+               "garbage line\n")
+        self.assertEqual(parse_gpu_procs(csv), [(1234, "/usr/bin/python", 17458),
+                                                (5678, "llama-server", 6808)])
+
     def test_final_tiers_use_the_bypass_lora_path(self):
         """Merging the LoRA into w4a8 costs 29% for no gain, and the regression is
         silent (same picture, slower). Tiers that use a merge-path LoRA must also

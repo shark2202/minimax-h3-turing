@@ -218,22 +218,28 @@ TORCH_DISABLE_NATIVE_JIT=1 ComfyUI/.venv/bin/python main.py \
 
 ### 3.1 工作流在哪
 
-已放进 ComfyUI 用户目录，**界面左侧 Workflows 面板直接可见**，无需下载（2026-10-21 整理过：把 17 个实验/已判死/被支配的工作流挪进 `_experiments/`，面板只留产线集合）：
+已放进 ComfyUI 用户目录，**界面左侧 Workflows 面板直接可见**（按**格式**分目录，前端 `recurse=true` 会按文件夹分组显示）：
 
 ```
-h3_w4a8_t2v_bypass2_api.json          文生视频·成片档      166s  ← 主力
-h3_w4a8_t2v_bypass_fbc6_api.json      文生视频·草稿档       95s  ← 主力
-h3_w4a8_t2v_firstblockcache1_api.json 文生视频·极限草稿     67s  （只选构图）
-h3_w4a8_i2v_bypass_api.json           图生视频·成片档      182s  ← 主力
-h3_w4a8_i2v_bypass_fbc6_api.json      图生视频·草稿档      103s  ← 主力
-h3_w4a8_t2v_qwenscript_api.json       t2v 成片档 + 本地 Qwen3.8 写剧本（§3.6）
-h3_w4a8_t2v_pddacc4_api.json          PDD-Acc 4 步（可用但不进产线，§5.6）
-h3_w4a8_t2v_pddacc8_api.json          PDD-Acc 8 步（同上）
-sdxl_juggernaut_t2i_api.json          文生图·SDXL Juggernaut XL v9
-demo.json                              ComfyUI 自带示例（非本项目）
+ComfyUI/user/default/workflows/
+├── ui/              ← 产线的**可视化**工作流（9 个）—— 日常从这里拖
+│     h3_w4a8_t2v_bypass2_api_ui.json      文生视频·成片档      166s  ← 主力
+│     h3_w4a8_t2v_bypass_fbc6_api_ui.json  文生视频·草稿档       95s  ← 主力
+│     h3_w4a8_t2v_firstblockcache1_api_ui  文生视频·极限草稿     67s  （只选构图）
+│     h3_w4a8_i2v_bypass_api_ui.json       图生视频·成片档      182s  ← 主力
+│     h3_w4a8_i2v_bypass_fbc6_api_ui.json  图生视频·草稿档      103s  ← 主力
+│     h3_w4a8_t2v_qwenscript_api_ui.json   剧本→出片（§3.6）
+│     h3_w4a8_t2v_pddacc4/8_api_ui.json    PDD-Acc 两档（可用但不进产线，§5.6）
+│     sdxl_juggernaut_t2i_api_ui.json      文生图·SDXL
+├── api/             ← 产线的 **API 格式**工作流（9 个，服务端 /prompt 吃的就是它）
+├── _experiments/    ← 实验/已判死/被支配的（api + ui 各 20 个）——别用在产线上
+└── demo.json        ← ComfyUI 自带示例（非本项目）
 ```
 
-`_experiments/` 里是本会话的**全部实验工作流**（含已判死的 EasyCache / larryvrh / FBC@0.3，以及被支配的 TeaCache / T8×TeaCache / 旧的 merge 版）——需要复现或回看时把文件拖回上一级即可，别在产线上用。
+**两种格式的关系**：API 版是"真相"（可被服务端执行、可被脚本批量跑），UI 版是"给人看的"。
+两者 1:1 对应，由 `scripts/wf_convert.py` 互转（用服务端 `/object_info` 推算 `widgets_values` 顺序）。
+**保真度已验证**：UI 文件转回 API 实际渲染，产物与 API 直跑**逐帧完全相同**（124/124，PSNR 168 dB）。
+仓库里同样按格式分目录：`workflows/api/` 与 `workflows/ui/`，说明见 [workflows/STRUCTURE.md](workflows/STRUCTURE.md)。
 
 前端识别 API 格式 JSON 并自动铺成节点图（`isApiJson` / `loadApiJson`）。也可自己导入：
 

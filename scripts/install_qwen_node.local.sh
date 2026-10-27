@@ -12,7 +12,7 @@ REPO="$(cd "$HERE/.." && pwd)"
 COMFY="${COMFY_DIR:-/home/a/ai-work/ComfyUI}"
 NODE_SRC="$REPO/comfy_nodes/ComfyUI-QwenScript"
 NODE_DST="$COMFY/custom_nodes/ComfyUI-QwenScript"
-WF_SRC="$REPO/workflows/h3_w4a8_t2v_qwenscript_api.json"
+WF_SRC="$REPO/workflows/api/h3_w4a8_t2v_qwenscript_api.json"
 WF_DST="$COMFY/user/default/workflows"
 
 [ -d "$COMFY" ] || { echo "no ComfyUI at $COMFY (set COMFY_DIR=)" >&2; exit 1; }
